@@ -6,6 +6,10 @@
 	objectVersion = 110;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		AB619967308F355400F484B9 /* ILSHandTracking in Frameworks */ = {isa = PBXBuildFile; productRef = AB619966308F355400F484B9 /* ILSHandTracking */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		AB7B0188308F270300AD2670 /* VisionHandTracking.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VisionHandTracking.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -38,6 +42,7 @@
 		AB7B0185308F270300AD2670 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				AB619967308F355400F484B9 /* ILSHandTracking in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -76,6 +81,9 @@
 				AB7B018A308F270300AD2670 /* VisionHandTracking */,
 			);
 			name = VisionHandTracking;
+			packageProductDependencies = (
+				AB619966308F355400F484B9 /* ILSHandTracking */,
+			);
 			productName = VisionHandTracking;
 			productReference = AB7B0188308F270300AD2670 /* VisionHandTracking.app */;
 			productType = "com.apple.product-type.application";
@@ -104,6 +112,9 @@
 			);
 			mainGroup = AB7B017F308F270300AD2670;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				AB619965308F355400F484B9 /* XCLocalSwiftPackageReference "ILSpatialSharedPackages/Features/ILSHandTracking" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = AB7B0189308F270300AD2670 /* Products */;
 			projectDirPath = "";
@@ -330,6 +341,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		AB619965308F355400F484B9 /* XCLocalSwiftPackageReference "ILSpatialSharedPackages/Features/ILSHandTracking" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ILSpatialSharedPackages/Features/ILSHandTracking;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AB619966308F355400F484B9 /* ILSHandTracking */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ILSHandTracking;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = AB7B0180308F270300AD2670 /* Project object */;
 	validationLevel = 1;
