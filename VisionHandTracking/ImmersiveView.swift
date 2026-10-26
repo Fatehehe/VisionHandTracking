@@ -7,17 +7,25 @@
 
 import SwiftUI
 import RealityKit
+import ILSHandTracking
 
 struct ImmersiveView: View {
 
     var body: some View {
         RealityView { content in
-            // Add the initial RealityKit content
-            if let immersiveContentEntity = try? await Entity(named: "Immersive", in: .main) {
-                content.add(immersiveContentEntity)
-
-                // Put skybox here.  See example in World project available at
-                // https://developer.apple.com/
+            SystemRegistry.registerAllSystems()
+            
+            let hands = await GloveSpawner.spawnHandGlovesAsync()
+            for hand in hands {
+                content.add(hand)
+            }
+            
+        }
+        .task {
+            do{
+                try await HandTrackingService.shared.start()
+            }catch{
+                print("ada error \(error.localizedDescription)")
             }
         }
     }

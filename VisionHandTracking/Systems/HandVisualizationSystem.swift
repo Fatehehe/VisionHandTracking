@@ -16,12 +16,11 @@ public class HandVisualizationSystem: System {
     required public init(scene: RealityKit.Scene) {}
     
     public func update(context: SceneUpdateContext) {
-        for anchorEntity in context.entities(matching: Self.query, updatingSystemWhen: .rendering){
+        for anchorEntity in context.entities(matching: Self.query, updatingSystemWhen: .rendering) {
             
             guard let visualization = anchorEntity.components[HandVisualizationComponent.self] else { continue }
             
-            guard let gloveWrapper = anchorEntity.children.first(where: { !$0.components.has(WeaponComponent.self) }) else { continue }
-            guard let gloveModel = findModelEntity(in: gloveWrapper) else { continue }
+            guard let gloveModel = findModelEntity(in: anchorEntity) else { continue }
 
             let handAnchor = (visualization.chirality == .left) ?
                 HandTrackingService.shared.latestLeftHand :
@@ -32,8 +31,6 @@ public class HandVisualizationSystem: System {
                 continue
             }
             
-            let isTriggerPose = HandPoseDetector.detect(handSkeleton: skeleton, thumb: true, index: true, mid: true, ring: true, little: true)
-
             anchorEntity.isEnabled = true
             anchorEntity.transform = Transform(matrix: trackedHand.originFromAnchorTransform)
 
