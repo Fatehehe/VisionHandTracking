@@ -17,10 +17,21 @@ public class HandVisualizationSystem: System {
     
     public func update(context: SceneUpdateContext) {
         for anchorEntity in context.entities(matching: Self.query, updatingSystemWhen: .rendering) {
+            guard var visualization = anchorEntity.components[HandVisualizationComponent.self] else { continue }
             
-            guard let visualization = anchorEntity.components[HandVisualizationComponent.self] else { continue }
+            // Resolve the skinned model (cached on component or discovered in hierarchy)
+            let gloveModel: ModelEntity?
+            if let cached = visualization.skinnedModel {
+                gloveModel = cached
+            } else if let found = findSkinnedModel(in: anchorEntity) {
+                visualization.skinnedModel = found
+                anchorEntity.components.set(visualization)
+                gloveModel = found
+            } else {
+                continue
+            }
             
-            guard let gloveModel = findModelEntity(in: anchorEntity) else { continue }
+            guard let model = gloveModel else { continue }
 
             let handAnchor = (visualization.chirality == .left) ?
                 HandTrackingService.shared.latestLeftHand :
@@ -34,24 +45,27 @@ public class HandVisualizationSystem: System {
             anchorEntity.isEnabled = true
             anchorEntity.transform = Transform(matrix: trackedHand.originFromAnchorTransform)
 
+            // Update skeletal joint rotations from ARKit HandSkeleton
             let joints = skeleton.allJoints
+            var transforms = model.jointTransforms
             for (index, joint) in joints.enumerated() {
-                if index < gloveModel.jointTransforms.count {
-                    let jointTransform = skeleton.joint(joint.name).parentFromJointTransform
-                    gloveModel.jointTransforms[index].rotation = simd_quatf(jointTransform)
-                }
+                guard index < transforms.count else { break }
+                let jointTransform = skeleton.joint(joint.name).parentFromJointTransform
+                transforms[index].rotation = simd_quatf(jointTransform)
             }
+            model.jointTransforms = transforms
         }
     }
     
-    private func findModelEntity(in entity: Entity) -> ModelEntity? {
-        if let model = entity as? ModelEntity {
-            return model
-        }
-        for child in entity.children {
-            if let found = findModelEntity(in: child) {
-                return found
+    /// Finds the ModelEntity that contains the skeletal rig (jointNames array is non-empty)
+    private func findSkinnedModel(in root: Entity) -> ModelEntity? {
+        var queue: [Entity] = [root]
+        while !queue.isEmpty {
+            let current = queue.removeFirst()
+            if let model = current as? ModelEntity, !model.jointNames.isEmpty {
+                return model
             }
+            queue.append(contentsOf: current.children)
         }
         return nil
     }
