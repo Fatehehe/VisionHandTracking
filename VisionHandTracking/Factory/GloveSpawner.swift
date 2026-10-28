@@ -33,7 +33,7 @@ public struct GloveSpawner {
         rightHand.name = "RightHandAnchor"
         rightHand.components.set(ILHandTrackingComponent())
         
-        if let rightGloveNode = scene.findEntity(named: "RightGlove") {
+        if let rightGloveNode = scene.findEntity(named: "RightHumanHand") {
             // Remove from scene root (detaching from any outer 'Gloves' grouping)
             rightGloveNode.removeFromParent()
             
@@ -64,7 +64,7 @@ public struct GloveSpawner {
         leftHand.name = "LeftHandAnchor"
         leftHand.components.set(ILHandTrackingComponent())
         
-        if let leftGloveNode = scene.findEntity(named: "LeftGlove") {
+        if let leftGloveNode = scene.findEntity(named: "LeftHumanHand") {
             leftGloveNode.removeFromParent()
             
             leftGloveNode.position = .zero
