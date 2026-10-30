@@ -5,7 +5,9 @@
 //  Created by Fatakhillah Khaqo on 26/10/26.
 //
 
-enum Bone: Int, CaseIterable, Sendable {
+import Foundation
+
+public enum Bone: Int, CaseIterable, Sendable {
     case arm
     case wrist
     case metacarpal
