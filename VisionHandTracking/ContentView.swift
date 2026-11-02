@@ -3,23 +3,27 @@
 //  VisionHandTracking
 //
 //  Created by Fatakhillah Khaqo on 26/10/26.
+//  Refactored by Senior Spatial Engineer on 28/10/26.
 //
 
 import SwiftUI
 import RealityKit
 
-struct ContentView: View {
+public struct ContentView: View {
+    @Environment(AppModel.self) private var appModel
 
-    var body: some View {
-        VStack {
-            Model3D(named: "Scene", bundle: .main)
-                .padding(.bottom, 50)
+    public init() {}
 
-            Text("Hello, world!")
-
+    public var body: some View {
+        VStack(spacing: 24) {
+            Text("Vision Hand Tracking")
+                .font(.largeTitle.weight(.bold))
+                .padding(.bottom, 12)
+            
             ToggleImmersiveSpaceButton()
         }
-        .padding()
+        .padding(40)
+        .frame(minWidth: 400)
     }
 }
 

@@ -9,30 +9,27 @@ import RealityKit
 import ARKit
 import SwiftUI
 import ILSHandTracking
+import simd
+internal import ILSFoundation
 
 public class HandVisualizationSystem: System {
     public static let query = EntityQuery(where: .has(HandVisualizationComponent.self))
-        
-    required public init(scene: RealityKit.Scene) {}
+    
+    private var tipDefaultMaterial: RealityKit.Material?
+    
+    required public init(scene: RealityKit.Scene) {
+        tipDefaultMaterial = HandSpawner.makeTipMaterial(isSnapped: false)
+    }
     
     public func update(context: SceneUpdateContext) {
         for anchorEntity in context.entities(matching: Self.query, updatingSystemWhen: .rendering) {
-            guard var visualization = anchorEntity.components[HandVisualizationComponent.self] else { continue }
+            guard let visualization = anchorEntity.components[HandVisualizationComponent.self] else { continue }
             
-            // Resolve the skinned model (cached on component or discovered in hierarchy)
-            let gloveModel: ModelEntity?
-            if let cached = visualization.skinnedModel {
-                gloveModel = cached
-            } else if let found = findSkinnedModel(in: anchorEntity) {
-                visualization.skinnedModel = found
-                anchorEntity.components.set(visualization)
-                gloveModel = found
-            } else {
+            guard visualization.isVisible else {
+                anchorEntity.isEnabled = false
                 continue
             }
             
-            guard let model = gloveModel else { continue }
-
             let handAnchor = (visualization.chirality == .left) ?
                 HandTrackingService.shared.latestLeftHand :
                 HandTrackingService.shared.latestRightHand
@@ -44,29 +41,78 @@ public class HandVisualizationSystem: System {
             
             anchorEntity.isEnabled = true
             anchorEntity.transform = Transform(matrix: trackedHand.originFromAnchorTransform)
-
-            // Update skeletal joint rotations from ARKit HandSkeleton
-            let joints = skeleton.allJoints
-            var transforms = model.jointTransforms
-            for (index, joint) in joints.enumerated() {
-                guard index < transforms.count else { break }
-                let jointTransform = skeleton.joint(joint.name).parentFromJointTransform
-                transforms[index].rotation = simd_quatf(jointTransform)
+            
+            switch visualization.mode {
+            case .jointSpheres:
+                if let spheresRoot = visualization.jointSpheresRoot {
+                    updateJointSpheres(root: spheresRoot, skeleton: skeleton)
+                }
+                
+            case .gloves:
+                if let gloveModel = visualization.skinnedModel {
+                    updateGloveJoints(for: gloveModel, with: skeleton)
+                }
             }
-            model.jointTransforms = transforms
         }
     }
     
-    /// Finds the ModelEntity that contains the skeletal rig (jointNames array is non-empty)
-    private func findSkinnedModel(in root: Entity) -> ModelEntity? {
-        var queue: [Entity] = [root]
-        while !queue.isEmpty {
-            let current = queue.removeFirst()
-            if let model = current as? ModelEntity, !model.jointNames.isEmpty {
-                return model
+    private func updateJointSpheres(
+        root: Entity,
+        skeleton: HandSkeleton
+    ) {
+        var jointLocalPositions: [HandSkeleton.JointName: SIMD3<Float>] = [:]
+        
+        for child in root.children {
+            guard let jointComp = child.components[HandJointEntityComponent.self] else { continue }
+            let jointName = jointComp.jointName
+            
+            let localPos = skeleton.joint(jointName).anchorFromJointTransform.translation
+            
+            if jointComp.isTip, let model = child as? ModelEntity, let defaultMat = tipDefaultMaterial {
+                model.model?.materials = [defaultMat]
             }
-            queue.append(contentsOf: current.children)
+            
+            child.position = localPos
+            jointLocalPositions[jointName] = localPos
         }
-        return nil
+        
+        for child in root.children {
+            guard let boneComp = child.components[BoneConnectorComponent.self] else { continue }
+            guard let posA = jointLocalPositions[boneComp.fromJoint],
+                  let posB = jointLocalPositions[boneComp.toJoint] else { continue }
+            
+            let delta = posB - posA
+            let length = simd_length(delta)
+            
+            guard length > 0.001 else {
+                child.scale = .zero
+                continue
+            }
+            
+            let direction = delta / length
+            let midpoint = (posA + posB) * 0.5
+            let rotation = simd_quatf(from: SIMD3<Float>(0, 1, 0), to: direction)
+            
+            child.transform = Transform(
+                scale: SIMD3<Float>(1.0, length, 1.0),
+                rotation: rotation,
+                translation: midpoint
+            )
+        }
+    }
+    
+    private func updateGloveJoints(
+        for model: ModelEntity,
+        with skeleton: HandSkeleton
+    ) {
+        let joints = skeleton.allJoints
+        var transforms = model.jointTransforms
+        
+        for (index, joint) in joints.enumerated() {
+            guard index < transforms.count else { break }
+            let jointTransform = skeleton.joint(joint.name).parentFromJointTransform
+            transforms[index].rotation = simd_quatf(jointTransform)
+        }
+        model.jointTransforms = transforms
     }
 }

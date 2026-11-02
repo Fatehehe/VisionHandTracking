@@ -10,9 +10,17 @@ import RealityKit
 import ILSHandTracking
 
 public struct SystemRegistry {
+    private static var isRegistered = false
     public static func registerAllSystems() {
+        guard !isRegistered else { return }
+        isRegistered = true
+        
         ILFeatureHandTrackingSetup.registerSystems()
+        
         HandVisualizationComponent.registerComponent()
+        HandJointEntityComponent.registerComponent()
+        BoneConnectorComponent.registerComponent()
+        
         HandVisualizationSystem.registerSystem()
     }
 }

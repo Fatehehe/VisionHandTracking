@@ -5,7 +5,9 @@
 //  Created by Fatakhillah Khaqo on 26/10/26.
 //
 
-enum Finger: Int, CaseIterable, Sendable {
+import Foundation
+
+public enum Finger: Int, CaseIterable, Sendable {
     case forearm
     case thumb
     case index

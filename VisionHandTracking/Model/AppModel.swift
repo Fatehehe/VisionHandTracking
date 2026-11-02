@@ -6,17 +6,19 @@
 //
 
 import SwiftUI
-import ARKit
 
-/// Maintains app-wide state
+/// Maintains app-wide reactive state for visionOS windows and immersive spaces.
 @MainActor
 @Observable
-class AppModel {
-    let immersiveSpaceID = "ImmersiveSpace"
-    enum ImmersiveSpaceState {
+public final class AppModel {
+    public let immersiveSpaceID = "ImmersiveSpace"
+    
+    public enum ImmersiveSpaceState {
         case closed
         case inTransition
         case open
     }
-    var immersiveSpaceState = ImmersiveSpaceState.closed
+    
+    public var immersiveSpaceState = ImmersiveSpaceState.closed
+    public var handRepresentationMode: HandMode = .jointSpheres
 }

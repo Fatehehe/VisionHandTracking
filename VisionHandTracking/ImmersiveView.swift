@@ -7,37 +7,81 @@
 
 import SwiftUI
 import RealityKit
+import ARKit
 import ILSHandTracking
 
-struct ImmersiveView: View {
-    var body: some View {
-        RealityView { content in
+public struct ImmersiveView: View {
+    @Environment(AppModel.self) private var appModel
+    
+    @State private var leftHandEntity: Entity?
+    @State private var rightHandEntity: Entity?
+    
+    public init() {}
+    
+    public var body: some View {
+        RealityView { content, attachments in
             SystemRegistry.registerAllSystems()
             
-            if let scene = await GloveSpawner.loadScene() {
-                let hands = GloveSpawner.spawnHandGloves(from: scene)
-
+            let gloveScene = await HandSpawner.loadScene()
+            
+            let leftHand = HandBuilder.createHand(chirality: .left, gloveScene: gloveScene)
+            let rightHand = HandBuilder.createHand(chirality: .right, gloveScene: gloveScene)
+            
+            self.leftHandEntity = leftHand
+            self.rightHandEntity = rightHand
+            
+            updateHandVisibility(for: leftHand, mode: appModel.handRepresentationMode)
+            updateHandVisibility(for: rightHand, mode: appModel.handRepresentationMode)
+            
+            content.add(leftHand)
+            content.add(rightHand)
+            
+            if let scene = gloveScene {
                 let worldRoot = Entity()
+                worldRoot.name = "WorldSceneRoot"
                 worldRoot.addChild(scene)
                 content.add(worldRoot)
-                
-                for hand in hands {
-                    content.add(hand)
-                }
-            } else {
-                print("Scene 'world' gagal dimuat.")
+            }
+
+            if let controlPanelEntity = attachments.entity(for: "SpatialControlPanel") {
+                controlPanelEntity.position = [0.0, 1.25, -0.65]
+                content.add(controlPanelEntity)
+            }
+        } attachments: {
+            Attachment(id: "SpatialControlPanel") {
+                HandControlPanel()
+                    .environment(appModel)
+            }
+        }
+        .onChange(of: appModel.handRepresentationMode) { _, newMode in
+            if let left = leftHandEntity {
+                print("value berubah untuk left hand")
+                updateHandVisibility(for: left, mode: newMode)
+            }
+            if let right = rightHandEntity {
+                print("value berubah untuk right hand")
+                updateHandVisibility(for: right, mode: newMode)
             }
         }
         .task {
             do {
                 try await HandTrackingService.shared.start()
             } catch {
-                print("Ada error hand tracking: \(error.localizedDescription)")
+                print("[ImmersiveView] Error starting hand tracking: \(error.localizedDescription)")
             }
         }
         .onDisappear {
             HandTrackingService.shared.stop()
         }
+    }
+    
+    private func updateHandVisibility(for hand: Entity, mode: HandMode) {
+        guard var component = hand.components[HandVisualizationComponent.self] else { return }
+        component.mode = mode
+        hand.components.set(component)
+        
+        component.jointSpheresRoot?.isEnabled = (mode == .jointSpheres)
+        component.gloveRoot?.isEnabled = (mode == .gloves)
     }
 }
 

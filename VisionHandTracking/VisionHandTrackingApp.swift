@@ -29,6 +29,6 @@ struct VisionHandTrackingApp: App {
                 }
         }
         .immersionStyle(selection: .constant(.mixed), in: .mixed)
-        .upperLimbVisibility(.hidden)
+        .upperLimbVisibility( .hidden)
      }
 }
