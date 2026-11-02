@@ -25,7 +25,6 @@ public struct HandControlPanel: View {
             }
             .pickerStyle(.segmented)
             
-            // Menampilkan deskripsi singkat mode yang sedang aktif
             Text(appModel.handRepresentationMode.description)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -33,6 +32,6 @@ public struct HandControlPanel: View {
         }
         .padding(20)
         .frame(width: 320)
-        .glassBackgroundEffect() // Efek kaca visionOS
+        .glassBackgroundEffect()
     }
 }

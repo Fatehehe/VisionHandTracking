@@ -16,9 +16,11 @@ public class HandVisualizationSystem: System {
     public static let query = EntityQuery(where: .has(HandVisualizationComponent.self))
     
     private var tipDefaultMaterial: RealityKit.Material?
+    private var tipSnappedMaterial: RealityKit.Material?
     
     required public init(scene: RealityKit.Scene) {
         tipDefaultMaterial = HandSpawner.makeTipMaterial(isSnapped: false)
+        tipSnappedMaterial = HandSpawner.makeTipMaterial(isSnapped: true)
     }
     
     public func update(context: SceneUpdateContext) {
@@ -45,7 +47,12 @@ public class HandVisualizationSystem: System {
             switch visualization.mode {
             case .jointSpheres:
                 if let spheresRoot = visualization.jointSpheresRoot {
-                    updateJointSpheres(root: spheresRoot, skeleton: skeleton)
+                    updateJointSpheres(
+                        root: spheresRoot,
+                        anchorEntity: anchorEntity,
+                        chirality: visualization.chirality,
+                        skeleton: skeleton
+                    )
                 }
                 
             case .gloves:
@@ -58,6 +65,8 @@ public class HandVisualizationSystem: System {
     
     private func updateJointSpheres(
         root: Entity,
+        anchorEntity: Entity,
+        chirality: HandAnchor.Chirality,
         skeleton: HandSkeleton
     ) {
         var jointLocalPositions: [HandSkeleton.JointName: SIMD3<Float>] = [:]
@@ -66,14 +75,28 @@ public class HandVisualizationSystem: System {
             guard let jointComp = child.components[HandJointEntityComponent.self] else { continue }
             let jointName = jointComp.jointName
             
-            let localPos = skeleton.joint(jointName).anchorFromJointTransform.translation
+            let rawLocalPos = skeleton.joint(jointName).anchorFromJointTransform.translation
             
-            if jointComp.isTip, let model = child as? ModelEntity, let defaultMat = tipDefaultMaterial {
-                model.model?.materials = [defaultMat]
+            if jointComp.isTip,
+               let finger = jointComp.finger,
+               let worldSnapPos = SnapService.shared.snappedWorldPosition(for: chirality, finger: finger) {
+                
+                // Convert world-space snap target position to hand anchor coordinate space
+                let localSnapPos = anchorEntity.convert(position: worldSnapPos, from: nil)
+                child.position = localSnapPos
+                jointLocalPositions[jointName] = localSnapPos
+                
+                if let model = child as? ModelEntity, let snappedMat = tipSnappedMaterial {
+                    model.model?.materials = [snappedMat]
+                }
+            } else {
+                child.position = rawLocalPos
+                jointLocalPositions[jointName] = rawLocalPos
+                
+                if jointComp.isTip, let model = child as? ModelEntity, let defaultMat = tipDefaultMaterial {
+                    model.model?.materials = [defaultMat]
+                }
             }
-            
-            child.position = localPos
-            jointLocalPositions[jointName] = localPos
         }
         
         for child in root.children {

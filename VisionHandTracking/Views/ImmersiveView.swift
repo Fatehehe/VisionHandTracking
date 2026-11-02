@@ -42,6 +42,15 @@ public struct ImmersiveView: View {
                 worldRoot.addChild(scene)
                 content.add(worldRoot)
             }
+            
+            // Add Interactive Components (Pull Switch, Push Button, Rotary Dial)
+            let pullSwitch = InteractivePullSwitch.create(position: [0.0, 0.95, -0.55])
+            let pushButton = InteractivePushButton.create(position: [-0.18, 0.95, -0.55])
+            let rotaryDial = InteractiveRotaryDial.create(position: [0.18, 0.95, -0.55])
+            
+            content.add(pullSwitch)
+            content.add(pushButton)
+            content.add(rotaryDial)
 
             if let controlPanelEntity = attachments.entity(for: "SpatialControlPanel") {
                 controlPanelEntity.position = [0.0, 1.25, -0.65]
@@ -55,11 +64,9 @@ public struct ImmersiveView: View {
         }
         .onChange(of: appModel.handRepresentationMode) { _, newMode in
             if let left = leftHandEntity {
-                print("value berubah untuk left hand")
                 updateHandVisibility(for: left, mode: newMode)
             }
             if let right = rightHandEntity {
-                print("value berubah untuk right hand")
                 updateHandVisibility(for: right, mode: newMode)
             }
         }
@@ -72,6 +79,7 @@ public struct ImmersiveView: View {
         }
         .onDisappear {
             HandTrackingService.shared.stop()
+            SnapService.shared.reset()
         }
     }
     
