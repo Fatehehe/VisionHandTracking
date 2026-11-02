@@ -3,7 +3,6 @@
 //  VisionHandTracking
 //
 //  Created by Fatakhillah Khaqo on 26/10/26.
-//  Enhanced by Senior Spatial Engineer on 28/10/26.
 //
 
 import ARKit
@@ -47,7 +46,9 @@ public struct Hand {
 
         // Define wrist and arm bones.
         (.forearmWrist, .forearm, .wrist),
-        (.forearmArm, .forearm, .arm)
+        (.forearmArm, .forearm, .arm),
+        
+        (.wrist, .forearm, .wrist)
     ]
     
     /// The kinematic hierarchy connections defining bones between parent and child joints.

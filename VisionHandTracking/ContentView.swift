@@ -16,26 +16,14 @@ public struct ContentView: View {
 
     public var body: some View {
         VStack(spacing: 24) {
-            // App Header
-            VStack(spacing: 6) {
-                Text("Vision Hand Tracking")
-                    .font(.largeTitle.weight(.bold))
-                
-                Text("Spatial Hand Visualization & Magnetic Fingertip Snapping")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 12)
+            Text("Vision Hand Tracking")
+                .font(.largeTitle.weight(.bold))
+                .padding(.bottom, 12)
             
-            // Hand Visualization Control Panel
-            HandControlPanel()
-            
-            // Space Toggle Button
             ToggleImmersiveSpaceButton()
-                .padding(.top, 8)
         }
-        .padding(32)
-        .frame(minWidth: 460)
+        .padding(40)
+        .frame(minWidth: 400)
     }
 }
 
