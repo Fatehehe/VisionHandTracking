@@ -66,13 +66,15 @@ public class HandVisualizationSystem: System {
             guard let jointComp = child.components[HandJointEntityComponent.self] else { continue }
             let jointName = jointComp.jointName
             
-            let localPos = skeleton.joint(jointName).anchorFromJointTransform.translation
+            let jointTransform = skeleton.joint(jointName).anchorFromJointTransform
+            let localPos = jointTransform.translation
             
             if jointComp.isTip, let model = child as? ModelEntity, let defaultMat = tipDefaultMaterial {
                 model.model?.materials = [defaultMat]
             }
             
             child.position = localPos
+            child.orientation = simd_quatf(jointTransform)
             jointLocalPositions[jointName] = localPos
         }
         

@@ -95,6 +95,12 @@ public struct HandSpawner{
                 isTip: isTip
             ))
             
+            if isTip {
+                jointEntity.enableLocalAxis(length: 0.025, thickness: 0.001, category: .fingertips)
+            } else {
+                jointEntity.enableLocalAxis(length: 0.018, thickness: 0.0008, category: .joints)
+            }
+            
             root.addChild(jointEntity)
         }
         

@@ -21,4 +21,6 @@ public final class AppModel {
     
     public var immersiveSpaceState = ImmersiveSpaceState.closed
     public var handRepresentationMode: HandMode = .jointSpheres
+    public var showLocalAxisMode: Bool = false
+    public var localAxisMode: LocalAxisCategory = .all
 }

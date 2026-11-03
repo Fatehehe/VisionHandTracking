@@ -49,6 +49,8 @@ public struct HandBuilder {
             skinnedModel: skinnedModel
         ))
         
+        handAnchor.enableLocalAxis(length: 0.06, thickness: 0.002, category: .hands)
+        
         return handAnchor
     }
 }

@@ -20,7 +20,9 @@ public struct SystemRegistry {
         HandVisualizationComponent.registerComponent()
         HandJointEntityComponent.registerComponent()
         BoneConnectorComponent.registerComponent()
+        LocalAxisComponent.registerComponent()
         
         HandVisualizationSystem.registerSystem()
+        LocalAxisSystem.registerSystem()
     }
 }
