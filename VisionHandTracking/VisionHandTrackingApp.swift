@@ -11,6 +11,10 @@ import SwiftUI
 struct VisionHandTrackingApp: App {
 
     @State private var appModel = AppModel()
+    
+    init() {
+        SpatialRuntime.handPoseProvider = ILSpatialHandPoseProvider()
+    }
 
     var body: some Scene {
         WindowGroup {

@@ -36,6 +36,9 @@ public struct ImmersiveView: View {
             content.add(leftHand)
             content.add(rightHand)
             
+            let testPullKnob = HandBuilder.create(position: [0.0, 1.0, -0.4])
+                        content.add(testPullKnob)
+            
             if let scene = gloveScene {
                 let worldRoot = Entity()
                 worldRoot.name = "WorldSceneRoot"
