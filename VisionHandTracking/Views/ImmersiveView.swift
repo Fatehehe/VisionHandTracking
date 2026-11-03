@@ -36,8 +36,13 @@ public struct ImmersiveView: View {
             content.add(leftHand)
             content.add(rightHand)
             
-            let testPullKnob = HandBuilder.create(position: [0.0, 1.0, -0.4])
-                        content.add(testPullKnob)
+            // Mengatur posisi objek berjejeran secara horizontal
+            // X negatif = Kiri, X positif = Kanan
+            let testPullKnob = HandBuilder.createPull(position: [-0.1, 1.0, -0.4]) // Geser kiri 10cm
+            content.add(testPullKnob)
+            
+            let testSwitch = HandBuilder.createSwitch(position: [0.1, 1.0, -0.4]) // Geser kanan 10cm
+            content.add(testSwitch)
             
             if let scene = gloveScene {
                 let worldRoot = Entity()

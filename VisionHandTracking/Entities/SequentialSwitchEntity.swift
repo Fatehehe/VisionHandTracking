@@ -82,17 +82,17 @@ public struct SequentialSwitchEntity {
         leverPivot.orientation = simd_quatf(angle: backwardAngle, axis: [1, 0, 0])
         
         // Attach SwitchComponent (initially locked!)
-        leverPivot.components.set(SwitchComponent(
-            switchAxis: [1, 0, 0],
-            // forwardDirection, switchMode, dst diasumsikan sudah ada di definisi struct SwitchComponent Anda
-            isGrabbed: false,
-            isUnlocked: false,
-            initialPosition: leverPivot.position,
-            interactionRadius: 0.065,
-            pullDistanceToUnlock: 0.035, // atau parameter sesuai definisi asli Anda
-            pullAxis: [0, 0, 1]
-        ))
-        root.addChild(leverPivot)
+//        leverPivot.components.set(SwitchComponent(
+//            switchAxis: [1, 0, 0],
+//            // forwardDirection, switchMode, dst diasumsikan sudah ada di definisi struct SwitchComponent Anda
+//            isGrabbed: false,
+//            isUnlocked: false,
+//            initialPosition: leverPivot.position,
+//            interactionRadius: 0.065,
+//            pullDistanceToUnlock: 0.035, // atau parameter sesuai definisi asli Anda
+//            pullAxis: [0, 0, 1]
+//        ))
+//        root.addChild(leverPivot)
         
         // MARK: - 4. Pull Safety Knob (PullComponent)
         let pullKnob = Entity()

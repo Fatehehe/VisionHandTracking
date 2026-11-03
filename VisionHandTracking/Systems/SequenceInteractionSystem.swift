@@ -24,7 +24,7 @@ public struct SequenceInteractionSystem: System {
             }
             
             if var switchComp = entity.components[SwitchComponent.self] {
-                switchComp.isUnlocked = (activeStep != .slide)
+//                switchComp.isUnlocked = (activeStep != .slide)
                 entity.components.set(switchComp)
             }
         }

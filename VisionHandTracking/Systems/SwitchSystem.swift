@@ -26,21 +26,22 @@ public struct SwitchSystem: System {
             
         for switchEntity in switches {
             guard var comp = switchEntity.components[SwitchComponent.self] else { continue }
-                
-            if comp.initialPosition == nil {
-                comp.initialPosition = switchEntity.transform.translation
+            
+            // Simpan rotasi awal sebagai referensi titik nol (0 radian)
+            if comp.initialRotation == nil {
+                comp.initialRotation = switchEntity.transform.rotation
             }
             
-            guard let initialPos = comp.initialPosition else { continue }
+            guard let initialRot = comp.initialRotation else { continue }
             
-            let localBounds = switchEntity.visualBounds(relativeTo: nil).center
+            let localBounds = switchEntity.visualBounds(relativeTo: switchEntity).center
             let switchCenter = switchEntity.convert(position: localBounds, to: nil)
             var activePinchCenter: SIMD3<Float>? = nil
             var isPinching = false
                              
+            // Deteksi Pinch
             for hand in hands {
                 let allTips = [hand.thumbTipPosition] + hand.nonThumbFingertips
-                                                    
                 for i in 0..<allTips.count {
                     for j in (i + 1)..<allTips.count {
                         let tip1 = allTips[i]
@@ -59,44 +60,55 @@ public struct SwitchSystem: System {
                 if isPinching { break }
             }
                 
+            // Logika Interaksi Switch
             if let pinchCenter = activePinchCenter, isPinching {
-                if !comp.isGrabbed {
-                    comp.isGrabbed = true
-                    comp.isUnlocked = false
-                    comp.startPinchPosition = pinchCenter
-                } else if let startPinch = comp.startPinchPosition {
-                    let pullDelta = pinchCenter - startPinch
+                if !comp.isInteracting {
+                    // Saat pertama kali jari melakukan pinch (grab)
+                    comp.isInteracting = true
+                    comp.startFingerPosition = pinchCenter
+                    comp.startIndexAtGrab = comp.currentStateIndex
+                } else if let startPos = comp.startFingerPosition {
+                    // Saat jari bergerak sambil pinch
+                    let pullDelta = pinchCenter - startPos
                     
-                    let worldPullAxis = switchEntity.parent?.convert(direction: comp.pullAxis, to: nil) ?? comp.pullAxis
-                    let pullAmount = simd_dot(pullDelta, simd_normalize(worldPullAxis))
-                                                    
-                    let visualPull = max(0, min(pullAmount, comp.pullDistanceToUnlock))
-                    let targetTranslation = initialPos + (comp.pullAxis * visualPull)
+                    // Hitung seberapa jauh tarikan pada sumbu pergerakan switch
+                    let worldMovementAxis = switchEntity.parent?.convert(direction: comp.movementAxis, to: nil) ?? comp.movementAxis
+                    let pullAmount = simd_dot(pullDelta, simd_normalize(worldMovementAxis))
                     
-                    switchEntity.transform.translation = simd_mix(switchEntity.transform.translation, targetTranslation, SIMD3<Float>(repeating: 0.4))
-                                                    
-                    if comp.isUnlocked {
-                        print("pull is unlock")
-                    } else {
-                        if pullAmount >= comp.pullDistanceToUnlock {
-                            comp.isUnlocked = true
-                        }
+                    // Tentukan perubahan langkah (step) berdasarkan dragSensitivity
+                    // Jika dragSensitivity 0.03, maka menarik sejauh 3cm = pindah 1 state
+                    let stepsToMove = Int(round(pullAmount / comp.dragSensitivity))
+                    var newIndex = comp.startIndexAtGrab + stepsToMove
+                    
+                    // Batasi index agar tidak keluar dari batas array states
+                    newIndex = max(0, min(newIndex, comp.states.count - 1))
+                    
+                    if newIndex != comp.currentStateIndex {
+                        comp.currentStateIndex = newIndex
+                        print("Switch State Changed to Index: \(newIndex)")
                     }
                 }
             } else {
-                if comp.isGrabbed {
-                    comp.isGrabbed = false
-                    comp.isUnlocked = false
-                    comp.startPinchPosition = nil
+                // Saat jari dilepas
+                if comp.isInteracting {
+                    comp.isInteracting = false
+                    comp.startFingerPosition = nil
                 }
-                                                    
-                switchEntity.transform.translation = simd_mix(
-                    switchEntity.transform.translation,
-                    initialPos,
-                    SIMD3<Float>(repeating: 0.25)
-                )
             }
             
+            // Visual Update: Rotasi objek ke sudut target sesuai currentStateIndex
+            let targetAngle = comp.states[comp.currentStateIndex]
+            let rotationDelta = simd_quatf(angle: targetAngle, axis: simd_normalize(comp.localRotationAxis))
+            let targetRotation = initialRot * rotationDelta
+            
+            // Interpolasi (slerp) agar pergerakan rotasinya halus, tidak patah-patah
+            switchEntity.transform.rotation = simd_slerp(
+                switchEntity.transform.rotation,
+                targetRotation,
+                0.25 // Kecepatan animasi
+            )
+            
+            // Simpan komponen yang sudah dimutasi kembali ke entitas
             switchEntity.components.set(comp)
         }
     }
