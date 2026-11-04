@@ -44,7 +44,7 @@ public struct ImmersiveView: View {
             // Standalone Switch: Snap Mode (1 or 2 fingers)
             let snapSwitch = HandBuilder.createSwitch(
                 position: [0.0, 1.0, -0.4],
-                fingerMode: .either,
+                fingerMode: .oneFinger,
                 behaviorMode: .snap
             )
             content.add(snapSwitch)
@@ -52,8 +52,8 @@ public struct ImmersiveView: View {
             // Standalone Switch: Lever-like Mode (1 or 2 fingers)
             let leverSwitch = HandBuilder.createSwitch(
                 position: [0.18, 1.0, -0.4],
-                fingerMode: .either,
-                behaviorMode: .leverLike
+                fingerMode: .twoFingers,
+                behaviorMode: .drag
             )
             content.add(leverSwitch)
             

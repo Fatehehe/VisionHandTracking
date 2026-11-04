@@ -8,16 +8,6 @@
 import RealityKit
 import simd
 
-/// Specifies the hand gesture condition required to interact with the switch.
-public enum SwitchFingerMode: String, Sendable, CaseIterable {
-    /// 1 finger: Interact by poking or pushing with the index fingertip.
-    case oneFinger = "1 Finger"
-    /// 2 fingers: Interact by pinching or grabbing with thumb + fingertip.
-    case twoFingers = "2 Fingers"
-    /// Either: Can be interacted with 1 finger (poke) or 2 fingers (pinch).
-    case either = "1 or 2 Fingers"
-}
-
 /// Specifies the physical interaction behavior mode of the switch.
 public enum SwitchBehaviorMode: String, Sendable, CaseIterable {
     /// Snap mode: when triggered, automatically snaps directly to the targeted angle / state.
@@ -26,12 +16,12 @@ public enum SwitchBehaviorMode: String, Sendable, CaseIterable {
     case leverLike = "Lever-like"
 }
 
+/// Typealias to HandGestureMode for backward compatibility.
+public typealias SwitchFingerMode = HandGestureMode
+
 /// Component that allows an entity to act as a realistic mechanical switch or lever.
 ///
-/// Features:
-/// - Configurable finger mode: 1 finger (`.oneFinger`), 2 fingers (`.twoFingers`), or either (`.either`).
-/// - Configurable behavior mode: instant snap (`.snap`) or real-time continuous lever tracking (`.leverLike`).
-/// - Multi-state support: any list of target angles in radians (e.g. `[-0.52, 0.52]` for 2-way, or `[-0.5, 0.0, 0.5]` for 3-way).
+/// Hand contact and movement deltas are automatically provided by `HandInteractionComponent`.
 public struct SwitchComponent: Component {
     
     /// Target rotation angles in radians for each state (e.g. `[-0.52, 0.52]` for OFF -30° and ON +30°).
@@ -52,20 +42,11 @@ public struct SwitchComponent: Component {
     /// Proximity radius in meters for fingertip or pinch detection (default: 0.065 m = 6.5 cm).
     public var interactionRadius: Float
     
-    /// Condition specifying whether this switch requires 1 finger, 2 fingers, or allows either.
-    public var fingerMode: SwitchFingerMode
+    /// Gesture condition: 1 finger (`.oneFinger`), 2 fingers (`.twoFingers`), or either (`.either`).
+    public var fingerMode: HandGestureMode
     
     /// Physical behavior mode: `.snap` (instant snap to target state) or `.leverLike` (continuous tracking).
     public var behaviorMode: SwitchBehaviorMode
-    
-    /// Whether the switch is currently actively being manipulated by a hand.
-    public var isInteracting: Bool = false
-    
-    /// The active finger mode that initiated the current interaction (.oneFinger or .twoFingers).
-    public var activeGrip: SwitchFingerMode? = nil
-    
-    /// World position of the interacting finger/pinch when the interaction began.
-    public var startFingerPosition: SIMD3<Float>?
     
     /// State index when grab/poke began.
     public var startIndexAtGrab: Int = 0
@@ -88,7 +69,7 @@ public struct SwitchComponent: Component {
         movementAxis: SIMD3<Float> = [0, 0, 1],
         dragSensitivity: Float = 0.035,
         interactionRadius: Float = 0.065,
-        fingerMode: SwitchFingerMode = .either,
+        fingerMode: HandGestureMode = .either,
         behaviorMode: SwitchBehaviorMode = .snap,
         initialRotation: simd_quatf? = nil,
         onStateChanged: ((Int) -> Void)? = nil
