@@ -68,10 +68,10 @@ public struct HandBuilder {
             root.addChild(model)
             
             // Pasang HandInteractionComponent & PullComponent
-            root.components.set(HandInteractionComponent(mode: .twoFingers, interactionRadius: 0.06))
+            root.components.set(HandInteractionComponent(mode: .twoFingers, interactionRadius: 0.01))
             root.components.set(PullComponent(
                 pullAxis: [0, 0, 1], // Ditarik ke arah Z positif (ke arah user)
-                interactionRadius: 0.06 // Jarak deteksi jari 6cm
+                interactionRadius: 0.01 // Jarak deteksi jari 6cm
             ))
             
             return root
@@ -124,14 +124,14 @@ public struct HandBuilder {
         lever.orientation = simd_quatf(angle: backwardAngle, axis: [1, 0, 0])
         
         // Attach HandInteractionComponent & SwitchComponent
-        lever.components.set(HandInteractionComponent(mode: fingerMode, interactionRadius: 0.065))
+        lever.components.set(HandInteractionComponent(mode: fingerMode, interactionRadius: 0.01))
         lever.components.set(SwitchComponent(
             states: [backwardAngle, forwardAngle],
             currentStateIndex: 0,
             localRotationAxis: [1, 0, 0],
             movementAxis: [0, 0, 1],
             dragSensitivity: 0.035,
-            interactionRadius: 0.065,
+            interactionRadius: 0.01,
             fingerMode: fingerMode,
             behaviorMode: behaviorMode,
             onStateChanged: { index in

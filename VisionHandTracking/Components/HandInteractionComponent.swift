@@ -74,3 +74,4 @@ public struct HandInteractionComponent: Component {
         self.interactionRadius = interactionRadius
     }
 }
+

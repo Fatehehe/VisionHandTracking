@@ -53,7 +53,7 @@ public struct ImmersiveView: View {
             let leverSwitch = HandBuilder.createSwitch(
                 position: [0.18, 1.0, -0.4],
                 fingerMode: .twoFingers,
-                behaviorMode: .drag
+                behaviorMode: .leverLike
             )
             content.add(leverSwitch)
             
