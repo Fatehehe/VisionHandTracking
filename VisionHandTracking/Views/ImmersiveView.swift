@@ -41,18 +41,20 @@ public struct ImmersiveView: View {
             let testPullKnob = HandBuilder.createPull(position: [-0.18, 1.0, -0.4]) // Standalone Pull Knob
             content.add(testPullKnob)
             
-            // Standalone Switch: Snap Mode (1 or 2 fingers)
+            // Standalone Switch: Snap Mode (test with 1 or 2 fingers)
             let snapSwitch = HandBuilder.createSwitch(
                 position: [0.0, 1.0, -0.4],
-                fingerMode: .oneFinger,
+                states: [-0.52, 0.52],
+                fingerMode: .either,
                 behaviorMode: .snap
             )
             content.add(snapSwitch)
             
-            // Standalone Switch: Lever-like Mode (1 or 2 fingers)
+            // Standalone Switch: Lever-like Mode (test with 1 or 2 fingers)
             let leverSwitch = HandBuilder.createSwitch(
                 position: [0.18, 1.0, -0.4],
-                fingerMode: .twoFingers,
+                states: [-0.52, 0.52],
+                fingerMode: .either,
                 behaviorMode: .leverLike
             )
             content.add(leverSwitch)

@@ -79,6 +79,7 @@ public struct HandBuilder {
     
     public static func createSwitch(
         position: SIMD3<Float> = [0.0, 1.0, -0.4],
+        states: [Float] = [-0.52, 0.52],
         fingerMode: SwitchFingerMode = .either,
         behaviorMode: SwitchBehaviorMode = .snap
     ) -> Entity {
@@ -118,27 +119,31 @@ public struct HandBuilder {
         knob.position = [0, 0.075, 0]
         lever.addChild(knob)
         
-        // Initial angle: backward (-30° / -0.52 rad)
-        let backwardAngle: Float = -0.52
-        let forwardAngle: Float = 0.52
-        lever.orientation = simd_quatf(angle: backwardAngle, axis: [1, 0, 0])
+        // Initial angle: first state in states array
+        let initialAngle = states.first ?? -0.52
+        lever.orientation = simd_quatf(angle: initialAngle, axis: [1, 0, 0])
         
         // Attach HandInteractionComponent & SwitchComponent
-        lever.components.set(HandInteractionComponent(mode: fingerMode, interactionRadius: 0.01))
+        lever.components.set(HandInteractionComponent(mode: fingerMode, interactionRadius: 0.06))
         lever.components.set(SwitchComponent(
-            states: [backwardAngle, forwardAngle],
+            states: states,
             currentStateIndex: 0,
             localRotationAxis: [1, 0, 0],
             movementAxis: [0, 0, 1],
             dragSensitivity: 0.035,
-            interactionRadius: 0.01,
+            interactionRadius: 0.06,
             fingerMode: fingerMode,
             behaviorMode: behaviorMode,
             onStateChanged: { index in
-                let isOn = index > 0
-                print("[TestSwitch] Toggled to state: \(isOn ? "FORWARD (ON)" : "BACKWARD (OFF)") [Index: \(index)]")
+                print("[TestSwitch] Toggled to state index: \(index)")
                 var mat = PhysicallyBasedMaterial()
-                mat.baseColor = .init(tint: isOn ? UIColor.systemGreen : UIColor.systemCyan)
+                if index == 0 {
+                    mat.baseColor = .init(tint: UIColor.systemCyan)
+                } else if index == 1 && states.count > 2 {
+                    mat.baseColor = .init(tint: UIColor.systemOrange)
+                } else {
+                    mat.baseColor = .init(tint: UIColor.systemGreen)
+                }
                 knob.model?.materials = [mat]
             }
         ))

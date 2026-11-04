@@ -10,8 +10,15 @@ import simd
 
 /// RealityKit System that drives mechanical switch and lever behaviors.
 ///
-/// Hand contact detection, finger tracking, and movement deltas are computed
-/// once per frame by `HandInteractionSystem` and read via `HandInteractionComponent`.
+/// Features:
+/// - Hand contact detection, finger tracking, and movement deltas are computed
+///   once per frame by `HandInteractionSystem` and read via `HandInteractionComponent`.
+/// - Supports continuous multi-step interaction while the hand remains attached:
+///   - `.snap` Mode: Pushing past the threshold snaps directly to the target state.
+///     The anchor point immediately resets to the current finger position, allowing you
+///     to seamlessly continue snapping forward or backward in one continuous interaction!
+///   - `.leverLike` Mode: The lever continuously follows the finger displacement in real time,
+///     and snaps into the next/previous detent when crossing the 50% stroke threshold.
 public struct SwitchSystem: System {
     
     private static let query = EntityQuery(where: .has(SwitchComponent.self))
@@ -38,77 +45,110 @@ public struct SwitchSystem: System {
             // 2. Read normalized hand interaction data from HandInteractionComponent
             let hand = switchEntity.components[HandInteractionComponent.self]
             
-            if let hand = hand, hand.isInteracting {
-                if hand.phase == .began {
-                    comp.startIndexAtGrab = comp.currentStateIndex
+            if let hand = hand, hand.isInteracting, let currentHandPos = hand.currentPosition {
+                // Initialize anchor when hand contact begins
+                if comp.lastInteractionPosition == nil {
+                    comp.lastInteractionPosition = currentHandPos
                 }
                 
-                // Project total hand displacement onto the switch's movement axis
+                guard let anchor = comp.lastInteractionPosition else { continue }
+                
+                // Project displacement from anchor onto the switch's local movement axis
                 let worldMovementAxis = switchEntity.parent?.convert(direction: comp.movementAxis, to: nil) ?? comp.movementAxis
-                let moveAmount = simd_dot(hand.totalDelta, simd_normalize(worldMovementAxis))
+                var moveAmount = simd_dot(currentHandPos - anchor, simd_normalize(worldMovementAxis))
                 
                 switch comp.behaviorMode {
                 case .snap:
-                    // SNAP MODE: Snap directly to the target state when movement exceeds trigger threshold
-                    let triggerThreshold = comp.dragSensitivity * 0.35
-                    let stepsToMove: Int
-                    if abs(moveAmount) > comp.dragSensitivity {
-                        stepsToMove = Int(round(moveAmount / comp.dragSensitivity))
-                    } else if moveAmount > triggerThreshold {
-                        stepsToMove = 1
-                    } else if moveAmount < -triggerThreshold {
-                        stepsToMove = -1
-                    } else {
-                        stepsToMove = 0
+                    // SNAP MODE:
+                    // Clamp anchor at state boundaries so reversing direction triggers immediately without deadzone
+                    if comp.currentStateIndex == 0 && moveAmount < 0 {
+                        comp.lastInteractionPosition = currentHandPos
+                        moveAmount = 0
+                    } else if comp.currentStateIndex >= (comp.states.count - 1) && moveAmount > 0 {
+                        comp.lastInteractionPosition = currentHandPos
+                        moveAmount = 0
                     }
                     
-                    var targetIndex = comp.startIndexAtGrab + stepsToMove
-                    targetIndex = max(0, min(targetIndex, comp.states.count - 1))
+                    let snapThreshold = comp.dragSensitivity * 0.45
                     
-                    if targetIndex != comp.currentStateIndex {
-                        comp.currentStateIndex = targetIndex
-                        print("[SwitchSystem - Snap] Snapped to state \(targetIndex) (Angle: \(comp.states[targetIndex]) rad)")
-                        comp.onStateChanged?(targetIndex)
+                    if moveAmount > snapThreshold && comp.currentStateIndex < (comp.states.count - 1) {
+                        // Snap forward to next state
+                        comp.currentStateIndex += 1
+                        comp.lastInteractionPosition = currentHandPos
+                        print("[SwitchSystem - Snap] Snapped forward to state \(comp.currentStateIndex) (Angle: \(comp.states[comp.currentStateIndex]) rad)")
+                        comp.onStateChanged?(comp.currentStateIndex)
+                    } else if moveAmount < -snapThreshold && comp.currentStateIndex > 0 {
+                        // Snap backward to previous state
+                        comp.currentStateIndex -= 1
+                        comp.lastInteractionPosition = currentHandPos
+                        print("[SwitchSystem - Snap] Snapped backward to state \(comp.currentStateIndex) (Angle: \(comp.states[comp.currentStateIndex]) rad)")
+                        comp.onStateChanged?(comp.currentStateIndex)
                     }
                     
-                    // Directly animate toward target rotation angle
+                    // Directly animate toward target rotation angle with crisp snap slerp
                     let targetAngle = comp.states[comp.currentStateIndex]
                     let targetRotation = initialRot * simd_quatf(angle: targetAngle, axis: simd_normalize(comp.localRotationAxis))
                     switchEntity.transform.rotation = simd_slerp(switchEntity.transform.rotation, targetRotation, 0.55)
                     
                 case .leverLike:
-                    // LEVER-LIKE MODE: Continuous real-time visual tracking of the lever
-                    let angle0 = comp.states.first ?? -0.52
-                    let angleLast = comp.states.last ?? 0.52
-                    let baseAngle = comp.states[comp.startIndexAtGrab]
-                    let angleRange = angleLast - angle0
-                    
-                    let progress = comp.dragSensitivity > 0.001 ? (moveAmount / comp.dragSensitivity) : 0.0
-                    let unclampedAngle = baseAngle + (progress * angleRange)
-                    let currentAngle = simd_clamp(unclampedAngle, min(angle0, angleLast), max(angle0, angleLast))
-                    
-                    let dynamicRotation = initialRot * simd_quatf(angle: currentAngle, axis: simd_normalize(comp.localRotationAxis))
-                    switchEntity.transform.rotation = simd_slerp(switchEntity.transform.rotation, dynamicRotation, 0.45)
-                    
-                    let stepsToMove = Int(round(moveAmount / comp.dragSensitivity))
-                    var newIndex = comp.startIndexAtGrab + stepsToMove
-                    newIndex = max(0, min(newIndex, comp.states.count - 1))
-                    
-                    if newIndex != comp.currentStateIndex {
-                        comp.currentStateIndex = newIndex
-                        print("[SwitchSystem - Lever] Lever state changed to \(newIndex)")
-                        comp.onStateChanged?(newIndex)
+                    // LEVER-LIKE MODE:
+                    // Clamp anchor at state boundaries
+                    if comp.currentStateIndex == 0 && moveAmount < 0 {
+                        comp.lastInteractionPosition = currentHandPos
+                        moveAmount = 0
+                    } else if comp.currentStateIndex >= (comp.states.count - 1) && moveAmount > 0 {
+                        comp.lastInteractionPosition = currentHandPos
+                        moveAmount = 0
                     }
+                    
+                    let currentBaseAngle = comp.states[comp.currentStateIndex]
+                    var visualAngle = currentBaseAngle
+                    let detentThreshold = comp.dragSensitivity * 0.5
+                    
+                    if moveAmount > 0 && comp.currentStateIndex < (comp.states.count - 1) {
+                        let nextAngle = comp.states[comp.currentStateIndex + 1]
+                        let progress = min(1.0, max(0.0, moveAmount / comp.dragSensitivity))
+                        visualAngle = currentBaseAngle + (progress * (nextAngle - currentBaseAngle))
+                        
+                        // Check if dragged past the detent snap threshold
+                        if moveAmount >= detentThreshold {
+                            comp.currentStateIndex += 1
+                            comp.lastInteractionPosition = currentHandPos
+                            visualAngle = comp.states[comp.currentStateIndex]
+                            print("[SwitchSystem - Lever Snap] Snapped forward to state \(comp.currentStateIndex)")
+                            comp.onStateChanged?(comp.currentStateIndex)
+                        }
+                    } else if moveAmount < 0 && comp.currentStateIndex > 0 {
+                        let prevAngle = comp.states[comp.currentStateIndex - 1]
+                        let progress = min(1.0, max(0.0, -moveAmount / comp.dragSensitivity))
+                        visualAngle = currentBaseAngle + (progress * (prevAngle - currentBaseAngle))
+                        
+                        // Check if dragged past the detent snap threshold
+                        if -moveAmount >= detentThreshold {
+                            comp.currentStateIndex -= 1
+                            comp.lastInteractionPosition = currentHandPos
+                            visualAngle = comp.states[comp.currentStateIndex]
+                            print("[SwitchSystem - Lever Snap] Snapped backward to state \(comp.currentStateIndex)")
+                            comp.onStateChanged?(comp.currentStateIndex)
+                        }
+                    }
+                    
+                    // Smoothly rotate following the finger during drag
+                    let dynamicRotation = initialRot * simd_quatf(angle: visualAngle, axis: simd_normalize(comp.localRotationAxis))
+                    switchEntity.transform.rotation = simd_slerp(switchEntity.transform.rotation, dynamicRotation, 0.5)
                 }
             } else {
-                // 3. Resting Detent Orientation (when not interacting)
+                // Hand is released / outside range -> reset anchor
+                comp.lastInteractionPosition = nil
+                
+                // Settle firmly into the resting detent orientation
                 let targetAngle = comp.states[comp.currentStateIndex]
                 let targetRotation = initialRot * simd_quatf(angle: targetAngle, axis: simd_normalize(comp.localRotationAxis))
                 
                 switchEntity.transform.rotation = simd_slerp(
                     switchEntity.transform.rotation,
                     targetRotation,
-                    comp.behaviorMode == .snap ? 0.6 : 0.35
+                    comp.behaviorMode == .snap ? 0.6 : 0.4
                 )
             }
             
