@@ -37,12 +37,25 @@ public struct ImmersiveView: View {
             content.add(rightHand)
             
             // Mengatur posisi objek berjejeran secara horizontal
-            // X negatif = Kiri, X positif = Kanan
-            let testPullKnob = HandBuilder.createPull(position: [-0.1, 1.0, -0.4]) // Geser kiri 10cm
+            // X negatif = Kiri, X tengah = 0.0, X positif = Kanan
+            let testPullKnob = HandBuilder.createPull(position: [-0.18, 1.0, -0.4]) // Standalone Pull Knob
             content.add(testPullKnob)
             
-            let testSwitch = HandBuilder.createSwitch(position: [0.1, 1.0, -0.4]) // Geser kanan 10cm
-            content.add(testSwitch)
+            // Standalone Switch: Snap Mode (1 or 2 fingers)
+            let snapSwitch = HandBuilder.createSwitch(
+                position: [0.0, 1.0, -0.4],
+                fingerMode: .either,
+                behaviorMode: .snap
+            )
+            content.add(snapSwitch)
+            
+            // Standalone Switch: Lever-like Mode (1 or 2 fingers)
+            let leverSwitch = HandBuilder.createSwitch(
+                position: [0.18, 1.0, -0.4],
+                fingerMode: .either,
+                behaviorMode: .leverLike
+            )
+            content.add(leverSwitch)
             
             if let scene = gloveScene {
                 let worldRoot = Entity()
