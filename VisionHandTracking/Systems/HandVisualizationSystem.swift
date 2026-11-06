@@ -52,14 +52,16 @@ public class HandVisualizationSystem: System {
                 return pull.isGrabbed && (pull.grabbingChirality == visualization.chirality || pull.grabbingChirality == nil)
             }
             
-            if let targetEntity = grabbedPullEntity {
+            if let targetEntity = grabbedPullEntity, let pull = targetEntity.components[PullComponent.self] {
                 // MARK: - Hand/Glove Snapping Active (OctaXR style)
                 if !visualization.isSnapped {
                     visualization.isSnapped = true
                     visualization.snappedTargetEntity = targetEntity
+                    visualization.snappedFingers = pull.interactingFingers.isEmpty ? [.thumb, .index] : pull.interactingFingers
                     
                     // 1. Preserve glove joint transforms (freeze finger pose in pinch)
                     if let gloveModel = visualization.skinnedModel {
+                        updateGloveJoints(for: gloveModel, with: skeleton)
                         visualization.preservedGloveTransforms = gloveModel.jointTransforms
                     }
                     
@@ -85,15 +87,27 @@ public class HandVisualizationSystem: System {
                     anchorEntity.transform = Transform(matrix: trackedHand.originFromAnchorTransform)
                 }
                 
-                // Maintain the preserved hand pose (do NOT overwrite finger joints with live tracking)
+                // Selective finger preservation:
+                // Only the interacting fingers (e.g. thumb & index) stay frozen in the grab pose,
+                // while the remaining fingers (e.g. middle, ring, little) continue tracking live movements.
                 switch visualization.mode {
                 case .jointSpheres:
                     if let spheresRoot = visualization.jointSpheresRoot, let savedPos = visualization.preservedJointPositions {
-                        applyPreservedJointPositions(root: spheresRoot, positions: savedPos)
+                        updateSelectiveJointSpheres(
+                            root: spheresRoot,
+                            skeleton: skeleton,
+                            preservedPositions: savedPos,
+                            snappedFingers: visualization.snappedFingers
+                        )
                     }
                 case .gloves:
                     if let gloveModel = visualization.skinnedModel, let savedTransforms = visualization.preservedGloveTransforms {
-                        gloveModel.jointTransforms = savedTransforms
+                        updateSelectiveGloveJoints(
+                            for: gloveModel,
+                            with: skeleton,
+                            preservedTransforms: savedTransforms,
+                            snappedFingers: visualization.snappedFingers
+                        )
                     }
                 }
             } else {
@@ -105,6 +119,7 @@ public class HandVisualizationSystem: System {
                     visualization.preservedJointPositions = nil
                     visualization.snappedTargetEntity = nil
                     visualization.anchorOffsetFromTarget = nil
+                    visualization.snappedFingers = []
                 }
                 
                 anchorEntity.transform = Transform(matrix: trackedHand.originFromAnchorTransform)
@@ -125,24 +140,70 @@ public class HandVisualizationSystem: System {
         }
     }
     
-    private func applyPreservedJointPositions(
+    private func updateSelectiveJointSpheres(
         root: Entity,
-        positions: [HandSkeleton.JointName: SIMD3<Float>]
+        skeleton: HandSkeleton,
+        preservedPositions: [HandSkeleton.JointName: SIMD3<Float>],
+        snappedFingers: Set<Finger>
     ) {
-        for child in root.children {
-            guard let jointComp = child.components[HandJointEntityComponent.self] else { continue }
-            if let localPos = positions[jointComp.jointName] {
-                child.position = localPos
-            }
-            if jointComp.isTip, let model = child as? ModelEntity, let snappedMat = tipSnappedMaterial {
-                model.model?.materials = [snappedMat]
-            }
-        }
+        var currentPositions: [HandSkeleton.JointName: SIMD3<Float>] = [:]
         
         for child in root.children {
+            guard let jointComp = child.components[HandJointEntityComponent.self] else { continue }
+            let jointName = jointComp.jointName
+            let isSnappedJoint = jointComp.finger.map { snappedFingers.contains($0) || $0 == .forearm } ?? false
+            
+            let localPos: SIMD3<Float>
+            if isSnappedJoint, let saved = preservedPositions[jointName] {
+                localPos = saved
+                if jointComp.isTip, let model = child as? ModelEntity, let snappedMat = tipSnappedMaterial {
+                    model.model?.materials = [snappedMat]
+                }
+            } else {
+                localPos = skeleton.joint(jointName).anchorFromJointTransform.translation
+                if jointComp.isTip, let model = child as? ModelEntity, let defaultMat = tipDefaultMaterial {
+                    model.model?.materials = [defaultMat]
+                }
+            }
+            
+            child.position = localPos
+            currentPositions[jointName] = localPos
+        }
+        
+        updateBones(root: root, jointPositions: currentPositions)
+    }
+    
+    private func updateJointSpheres(
+        root: Entity,
+        skeleton: HandSkeleton
+    ) {
+        var currentPositions: [HandSkeleton.JointName: SIMD3<Float>] = [:]
+        
+        for child in root.children {
+            guard let jointComp = child.components[HandJointEntityComponent.self] else { continue }
+            let jointName = jointComp.jointName
+            
+            let localPos = skeleton.joint(jointName).anchorFromJointTransform.translation
+            
+            if jointComp.isTip, let model = child as? ModelEntity, let defaultMat = tipDefaultMaterial {
+                model.model?.materials = [defaultMat]
+            }
+            
+            child.position = localPos
+            currentPositions[jointName] = localPos
+        }
+        
+        updateBones(root: root, jointPositions: currentPositions)
+    }
+    
+    private func updateBones(
+        root: Entity,
+        jointPositions: [HandSkeleton.JointName: SIMD3<Float>]
+    ) {
+        for child in root.children {
             guard let boneComp = child.components[BoneConnectorComponent.self] else { continue }
-            guard let posA = positions[boneComp.fromJoint],
-                  let posB = positions[boneComp.toJoint] else { continue }
+            guard let posA = jointPositions[boneComp.fromJoint],
+                  let posB = jointPositions[boneComp.toJoint] else { continue }
             
             let delta = posB - posA
             let length = simd_length(delta)
@@ -164,49 +225,28 @@ public class HandVisualizationSystem: System {
         }
     }
     
-    private func updateJointSpheres(
-        root: Entity,
-        skeleton: HandSkeleton
+    private func updateSelectiveGloveJoints(
+        for model: ModelEntity,
+        with skeleton: HandSkeleton,
+        preservedTransforms: [Transform],
+        snappedFingers: Set<Finger>
     ) {
-        var jointLocalPositions: [HandSkeleton.JointName: SIMD3<Float>] = [:]
+        let joints = skeleton.allJoints
+        var transforms = model.jointTransforms
         
-        for child in root.children {
-            guard let jointComp = child.components[HandJointEntityComponent.self] else { continue }
-            let jointName = jointComp.jointName
+        for (index, joint) in joints.enumerated() {
+            guard index < transforms.count else { break }
+            let finger = Hand.finger(for: joint.name)
+            let isSnappedJoint = finger.map { snappedFingers.contains($0) || $0 == .forearm } ?? false
             
-            let localPos = skeleton.joint(jointName).anchorFromJointTransform.translation
-            
-            if jointComp.isTip, let model = child as? ModelEntity, let defaultMat = tipDefaultMaterial {
-                model.model?.materials = [defaultMat]
+            if isSnappedJoint && index < preservedTransforms.count {
+                transforms[index].rotation = preservedTransforms[index].rotation
+            } else {
+                let jointTransform = skeleton.joint(joint.name).parentFromJointTransform
+                transforms[index].rotation = simd_quatf(jointTransform)
             }
-            
-            child.position = localPos
-            jointLocalPositions[jointName] = localPos
         }
-        
-        for child in root.children {
-            guard let boneComp = child.components[BoneConnectorComponent.self] else { continue }
-            guard let posA = jointLocalPositions[boneComp.fromJoint],
-                  let posB = jointLocalPositions[boneComp.toJoint] else { continue }
-            
-            let delta = posB - posA
-            let length = simd_length(delta)
-            
-            guard length > 0.001 else {
-                child.scale = .zero
-                continue
-            }
-            
-            let direction = delta / length
-            let midpoint = (posA + posB) * 0.5
-            let rotation = simd_quatf(from: SIMD3<Float>(0, 1, 0), to: direction)
-            
-            child.transform = Transform(
-                scale: SIMD3<Float>(1.0, length, 1.0),
-                rotation: rotation,
-                translation: midpoint
-            )
-        }
+        model.jointTransforms = transforms
     }
     
     private func updateGloveJoints(

@@ -39,6 +39,9 @@ public struct HandInteractionSystem: System {
                 var detectedPos: SIMD3<Float>? = nil
                 var detectedGrip: HandGestureMode? = nil
                 var detectedChirality: HandAnchor.Chirality? = nil
+                var detectedFingers: Set<Finger> = []
+                
+                let tipFingers: [Finger] = [.thumb, .index, .middle, .ring, .little]
                 
                 for hand in hands {
                     // Check 2-Finger Pinch (if mode allows twoFingers)
@@ -54,6 +57,11 @@ public struct HandInteractionSystem: System {
                                         detectedPos = pinchMidpoint
                                         detectedGrip = .twoFingers
                                         detectedChirality = (hand.chirality == .left) ? .left : .right
+                                        if i < tipFingers.count && j < tipFingers.count {
+                                            detectedFingers = [tipFingers[i], tipFingers[j]]
+                                        } else {
+                                            detectedFingers = [.thumb, .index]
+                                        }
                                         break
                                     }
                                 }
@@ -69,6 +77,7 @@ public struct HandInteractionSystem: System {
                             detectedPos = indexTip
                             detectedGrip = .oneFinger
                             detectedChirality = (hand.chirality == .left) ? .left : .right
+                            detectedFingers = [.index]
                             break
                         }
                     }
@@ -81,6 +90,7 @@ public struct HandInteractionSystem: System {
                     handComp.isInteracting = true
                     handComp.activeGrip = grip
                     handComp.interactingChirality = detectedChirality
+                    handComp.interactingFingers = detectedFingers
                     handComp.startPosition = startPos
                     handComp.currentPosition = startPos
                     handComp.previousPosition = startPos
@@ -91,6 +101,7 @@ public struct HandInteractionSystem: System {
                     handComp.isInteracting = false
                     handComp.activeGrip = nil
                     handComp.interactingChirality = nil
+                    handComp.interactingFingers = []
                     handComp.startPosition = nil
                     handComp.currentPosition = nil
                     handComp.previousPosition = nil
@@ -148,6 +159,7 @@ public struct HandInteractionSystem: System {
                     handComp.isInteracting = false
                     handComp.activeGrip = nil
                     handComp.interactingChirality = nil
+                    handComp.interactingFingers = []
                     handComp.startPosition = nil
                     handComp.currentPosition = nil
                     handComp.previousPosition = nil

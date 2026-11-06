@@ -7,6 +7,7 @@
 
 import RealityKit
 import simd
+import ARKit
 
 public struct PullComponent: Component {
     public var pullAxis: SIMD3<Float>
@@ -21,6 +22,9 @@ public struct PullComponent: Component {
     /// Which hand (left or right) is currently grabbing this pull component.
     public var grabbingChirality: HandAnchor.Chirality? = nil
     
+    /// Which fingers are actively grabbing this pull component (e.g. [.thumb, .index]).
+    public var interactingFingers: Set<Finger> = [.thumb, .index]
+    
     // NEW: Titik lokal pada objek di mana jari (cubitan) seharusnya menempel
     public var dragOffset: SIMD3<Float> = .zero
     
@@ -29,12 +33,14 @@ public struct PullComponent: Component {
         pullDistanceToUnlock: Float = 0.025,
         interactionRadius: Float = 0.05,
         dragOffset: SIMD3<Float> = .zero,
-        grabbingChirality: HandAnchor.Chirality? = nil
+        grabbingChirality: HandAnchor.Chirality? = nil,
+        interactingFingers: Set<Finger> = [.thumb, .index]
     ) {
         self.pullAxis = pullAxis
         self.pullDistanceToUnlock = pullDistanceToUnlock
         self.interactionRadius = interactionRadius
         self.dragOffset = dragOffset
         self.grabbingChirality = grabbingChirality
+        self.interactingFingers = interactingFingers
     }
 }

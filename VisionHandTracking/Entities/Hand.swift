@@ -113,15 +113,23 @@ public struct Hand {
         }
     }
     
-    /// Maps a fingertip joint name to its corresponding finger enum.
-    public static func finger(for tipJoint: HandSkeleton.JointName) -> Finger? {
-        switch tipJoint {
-        case .thumbTip: return .thumb
-        case .indexFingerTip: return .index
-        case .middleFingerTip: return .middle
-        case .ringFingerTip: return .ring
-        case .littleFingerTip: return .little
-        default: return nil
+    /// Maps any skeleton joint name to its corresponding finger classification.
+    public static func finger(for joint: HandSkeleton.JointName) -> Finger? {
+        switch joint {
+        case .thumbKnuckle, .thumbIntermediateBase, .thumbIntermediateTip, .thumbTip:
+            return .thumb
+        case .indexFingerMetacarpal, .indexFingerKnuckle, .indexFingerIntermediateBase, .indexFingerIntermediateTip, .indexFingerTip:
+            return .index
+        case .middleFingerMetacarpal, .middleFingerKnuckle, .middleFingerIntermediateBase, .middleFingerIntermediateTip, .middleFingerTip:
+            return .middle
+        case .ringFingerMetacarpal, .ringFingerKnuckle, .ringFingerIntermediateBase, .ringFingerIntermediateTip, .ringFingerTip:
+            return .ring
+        case .littleFingerMetacarpal, .littleFingerKnuckle, .littleFingerIntermediateBase, .littleFingerIntermediateTip, .littleFingerTip:
+            return .little
+        case .forearmWrist, .forearmArm, .wrist:
+            return .forearm
+        default:
+            return nil
         }
     }
 }

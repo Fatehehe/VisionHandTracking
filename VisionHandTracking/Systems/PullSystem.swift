@@ -36,6 +36,7 @@ public struct PullSystem: System {
             if let hand = hand, hand.isInteracting {
                 comp.isGrabbed = true // Broadcast bahwa objek sedang dipegang
                 comp.grabbingChirality = hand.interactingChirality
+                comp.interactingFingers = hand.interactingFingers.isEmpty ? [.thumb, .index] : hand.interactingFingers
                 
                 let worldPullAxis = pullEntity.parent?.convert(direction: comp.pullAxis, to: nil) ?? comp.pullAxis
                 let pullAmount = simd_dot(hand.totalDelta, simd_normalize(worldPullAxis))
@@ -56,6 +57,7 @@ public struct PullSystem: System {
             } else {
                 comp.isGrabbed = false // Lepas pegangan
                 comp.grabbingChirality = nil
+                comp.interactingFingers = []
                 
                 let targetPos = comp.isUnlocked
                     ? initialPos + (comp.pullAxis * comp.pullDistanceToUnlock)

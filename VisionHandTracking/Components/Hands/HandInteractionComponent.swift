@@ -7,6 +7,7 @@
 
 import RealityKit
 import simd
+import ARKit
 
 /// Specifies which hand gestures an entity accepts for interaction.
 public enum HandGestureMode: String, Sendable, CaseIterable {
@@ -53,6 +54,9 @@ public struct HandInteractionComponent: Component {
     
     /// Which gesture mode actually initiated the current contact (.oneFinger or .twoFingers).
     public var activeGrip: HandGestureMode? = nil
+    
+    /// Which fingers are actively participating in this interaction (e.g. [.thumb, .index] for pinch, [.index] for poke).
+    public var interactingFingers: Set<Finger> = []
     
     /// World position of the contact point when the interaction began.
     public var startPosition: SIMD3<Float>? = nil

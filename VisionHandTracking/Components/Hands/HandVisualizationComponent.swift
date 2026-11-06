@@ -33,6 +33,10 @@ public struct HandVisualizationComponent: Component {
     /// World transform offset between target entity and hand anchor when grab began.
     public var anchorOffsetFromTarget: simd_float4x4? = nil
     
+    /// Which fingers should stay still / snapped during the interaction (e.g. [.thumb, .index]).
+    /// Other fingers remain free and continue updating with live tracking.
+    public var snappedFingers: Set<Finger> = [.thumb, .index]
+    
     public init(
         chirality: HandAnchor.Chirality,
         mode: HandMode = .jointSpheres,
@@ -40,7 +44,8 @@ public struct HandVisualizationComponent: Component {
         jointSpheresRoot: Entity? = nil,
         gloveRoot: Entity? = nil,
         skinnedModel: ModelEntity? = nil,
-        scale: SIMD3<Float> = .one
+        scale: SIMD3<Float> = .one,
+        snappedFingers: Set<Finger> = [.thumb, .index]
     ) {
         self.chirality = chirality
         self.mode = mode
@@ -49,5 +54,6 @@ public struct HandVisualizationComponent: Component {
         self.gloveRoot = gloveRoot
         self.skinnedModel = skinnedModel
         self.scale = scale
+        self.snappedFingers = snappedFingers
     }
 }
