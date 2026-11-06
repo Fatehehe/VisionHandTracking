@@ -8,32 +8,33 @@
 import RealityKit
 import simd
 
-/// Component that allows an entity to be pulled along a local axis.
-///
-/// Hand contact and movement deltas are automatically provided by `HandInteractionComponent`.
 public struct PullComponent: Component {
-    /// Local axis along which the entity moves when pulled (default: `[0, 0, 1]`).
     public var pullAxis: SIMD3<Float>
-    
-    /// Distance (in meters) the entity must be pulled to trigger the unlock state (default: 0.025 m = 2.5 cm).
     public var pullDistanceToUnlock: Float
-    
-    /// Whether the entity is currently pulled to or past the unlock distance.
     public var isUnlocked: Bool = false
-    
-    /// Initial resting position of the entity before pulling.
     public var initialPosition: SIMD3<Float>?
-    
-    /// Proximity radius (used when auto-attaching HandInteractionComponent).
     public var interactionRadius: Float
+    
+    // NEW: State untuk memberi tahu sistem visual bahwa objek sedang ditarik
+    public var isGrabbed: Bool = false
+    
+    /// Which hand (left or right) is currently grabbing this pull component.
+    public var grabbingChirality: HandAnchor.Chirality? = nil
+    
+    // NEW: Titik lokal pada objek di mana jari (cubitan) seharusnya menempel
+    public var dragOffset: SIMD3<Float> = .zero
     
     public init(
         pullAxis: SIMD3<Float> = [0, 0, 1],
         pullDistanceToUnlock: Float = 0.025,
-        interactionRadius: Float = 0.05
+        interactionRadius: Float = 0.05,
+        dragOffset: SIMD3<Float> = .zero,
+        grabbingChirality: HandAnchor.Chirality? = nil
     ) {
         self.pullAxis = pullAxis
         self.pullDistanceToUnlock = pullDistanceToUnlock
         self.interactionRadius = interactionRadius
+        self.dragOffset = dragOffset
+        self.grabbingChirality = grabbingChirality
     }
 }

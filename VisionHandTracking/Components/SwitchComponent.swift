@@ -8,20 +8,6 @@
 import RealityKit
 import simd
 
-/// Specifies the physical interaction behavior mode of the switch.
-public enum SwitchBehaviorMode: String, Sendable, CaseIterable {
-    /// Snap mode: when triggered, automatically snaps directly to the targeted angle / state.
-    case snap = "Snap"
-    /// Lever-like mode: continuously follows finger displacement in real time, snapping to detent on release.
-    case leverLike = "Lever-like"
-}
-
-/// Typealias to HandGestureMode for backward compatibility.
-public typealias SwitchFingerMode = HandGestureMode
-
-/// Component that allows an entity to act as a realistic mechanical switch or lever.
-///
-/// Hand contact and movement deltas are automatically provided by `HandInteractionComponent`.
 public struct SwitchComponent: Component {
     
     /// Target rotation angles in radians for each state (e.g. `[-0.52, 0.52]` for OFF -30° and ON +30°).
@@ -46,7 +32,7 @@ public struct SwitchComponent: Component {
     public var fingerMode: HandGestureMode
     
     /// Physical behavior mode: `.snap` (instant snap to target state) or `.leverLike` (continuous tracking).
-    public var behaviorMode: SwitchBehaviorMode
+    public var behaviorMode: SwitchMode
     
     /// State index when grab/poke began.
     public var startIndexAtGrab: Int = 0
@@ -67,10 +53,10 @@ public struct SwitchComponent: Component {
         currentStateIndex: Int = 0,
         localRotationAxis: SIMD3<Float> = [1, 0, 0],
         movementAxis: SIMD3<Float> = [0, 0, 1],
-        dragSensitivity: Float = 0.035,
-        interactionRadius: Float = 0.065,
+        dragSensitivity: Float = 0.04,
+        interactionRadius: Float = 0.05,
         fingerMode: HandGestureMode = .either,
-        behaviorMode: SwitchBehaviorMode = .snap,
+        behaviorMode: SwitchMode = .snap,
         initialRotation: simd_quatf? = nil,
         onStateChanged: ((Int) -> Void)? = nil
     ) {

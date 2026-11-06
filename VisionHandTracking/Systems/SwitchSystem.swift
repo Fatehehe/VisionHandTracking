@@ -50,7 +50,7 @@ public struct SwitchSystem: System {
                 switch comp.behaviorMode {
                 case .snap:
                     // SNAP MODE: Snap directly to the target state when movement exceeds trigger threshold
-                    let triggerThreshold = comp.dragSensitivity * 0.35
+                    let triggerThreshold = comp.dragSensitivity
                     let stepsToMove: Int
                     if abs(moveAmount) > comp.dragSensitivity {
                         stepsToMove = Int(round(moveAmount / comp.dragSensitivity))

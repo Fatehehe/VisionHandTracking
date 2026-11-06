@@ -79,8 +79,11 @@ public struct HandBuilder {
     
     public static func createSwitch(
         position: SIMD3<Float> = [0.0, 1.0, -0.4],
-        fingerMode: SwitchFingerMode = .either,
-        behaviorMode: SwitchBehaviorMode = .snap
+        states: [Float] = [-0.52, 0, 0.52],
+        fingerMode: HandGestureMode = .either,
+        behaviorMode: SwitchMode = .snap,
+        interactionRadius: Float = 0.01,
+        dragSensitivity: Float = 0.4
     ) -> Entity {
         let root = Entity()
         root.name = "TestSwitchRoot"
@@ -130,8 +133,8 @@ public struct HandBuilder {
             currentStateIndex: 0,
             localRotationAxis: [1, 0, 0],
             movementAxis: [0, 0, 1],
-            dragSensitivity: 0.035,
-            interactionRadius: 0.01,
+            dragSensitivity: dragSensitivity,
+            interactionRadius: interactionRadius,
             fingerMode: fingerMode,
             behaviorMode: behaviorMode,
             onStateChanged: { index in

@@ -38,6 +38,7 @@ public struct HandInteractionSystem: System {
             if !handComp.isInteracting {
                 var detectedPos: SIMD3<Float>? = nil
                 var detectedGrip: HandGestureMode? = nil
+                var detectedChirality: HandAnchor.Chirality? = nil
                 
                 for hand in hands {
                     // Check 2-Finger Pinch (if mode allows twoFingers)
@@ -52,6 +53,7 @@ public struct HandInteractionSystem: System {
                                     if simd_distance(pinchMidpoint, entityCenter) <= (handComp.interactionRadius * 1.5) {
                                         detectedPos = pinchMidpoint
                                         detectedGrip = .twoFingers
+                                        detectedChirality = (hand.chirality == .left) ? .left : .right
                                         break
                                     }
                                 }
@@ -66,6 +68,7 @@ public struct HandInteractionSystem: System {
                         if simd_distance(indexTip, entityCenter) <= handComp.interactionRadius {
                             detectedPos = indexTip
                             detectedGrip = .oneFinger
+                            detectedChirality = (hand.chirality == .left) ? .left : .right
                             break
                         }
                     }
@@ -77,6 +80,7 @@ public struct HandInteractionSystem: System {
                     handComp.phase = .began
                     handComp.isInteracting = true
                     handComp.activeGrip = grip
+                    handComp.interactingChirality = detectedChirality
                     handComp.startPosition = startPos
                     handComp.currentPosition = startPos
                     handComp.previousPosition = startPos
@@ -86,6 +90,7 @@ public struct HandInteractionSystem: System {
                     handComp.phase = .idle
                     handComp.isInteracting = false
                     handComp.activeGrip = nil
+                    handComp.interactingChirality = nil
                     handComp.startPosition = nil
                     handComp.currentPosition = nil
                     handComp.previousPosition = nil
@@ -142,6 +147,7 @@ public struct HandInteractionSystem: System {
                     handComp.phase = .ended
                     handComp.isInteracting = false
                     handComp.activeGrip = nil
+                    handComp.interactingChirality = nil
                     handComp.startPosition = nil
                     handComp.currentPosition = nil
                     handComp.previousPosition = nil

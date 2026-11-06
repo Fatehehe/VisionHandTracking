@@ -31,11 +31,12 @@ public struct PullSystem: System {
             }
             guard let initialPos = comp.initialPosition else { continue }
             
-            // Read normalized hand interaction data
             let hand = pullEntity.components[HandInteractionComponent.self]
-            
+                    
             if let hand = hand, hand.isInteracting {
-                // Project total hand displacement onto the local pull axis
+                comp.isGrabbed = true // Broadcast bahwa objek sedang dipegang
+                comp.grabbingChirality = hand.interactingChirality
+                
                 let worldPullAxis = pullEntity.parent?.convert(direction: comp.pullAxis, to: nil) ?? comp.pullAxis
                 let pullAmount = simd_dot(hand.totalDelta, simd_normalize(worldPullAxis))
                 
@@ -53,19 +54,21 @@ public struct PullSystem: System {
                     print("[PullSystem] Safety latch unlocked! Ready to switch.")
                 }
             } else {
-                // If not interacting, spring to resting position (or held position if unlocked)
+                comp.isGrabbed = false // Lepas pegangan
+                comp.grabbingChirality = nil
+                
                 let targetPos = comp.isUnlocked
                     ? initialPos + (comp.pullAxis * comp.pullDistanceToUnlock)
                     : initialPos
                 
                 pullEntity.transform.translation = simd_mix(
                     pullEntity.transform.translation,
-                    targetPos,
-                    SIMD3<Float>(repeating: 0.25)
-                )
-            }
-            
-            pullEntity.components.set(comp)
+                            targetPos,
+                            SIMD3<Float>(repeating: 0.25)
+                        )
+                    }
+                    
+                    pullEntity.components.set(comp)
         }
     }
 }

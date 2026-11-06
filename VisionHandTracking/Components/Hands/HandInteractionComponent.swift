@@ -48,6 +48,9 @@ public struct HandInteractionComponent: Component {
     /// Whether a hand is currently actively interacting with this entity.
     public var isInteracting: Bool = false
     
+    /// Which hand (left or right) is actively interacting with this entity.
+    public var interactingChirality: HandAnchor.Chirality? = nil
+    
     /// Which gesture mode actually initiated the current contact (.oneFinger or .twoFingers).
     public var activeGrip: HandGestureMode? = nil
     
