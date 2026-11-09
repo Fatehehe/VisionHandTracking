@@ -16,6 +16,9 @@ public struct SequentialSwitchEntity {
     
     public static func create(
         position: SIMD3<Float> = [0.0, 1.0, -0.6],
+        fingerMode: HandGestureMode = .twoFingers,
+        behaviorMode: SwitchMode = .snap,
+        autoResetOnCompletion: Bool = true,
         onStateChanged: ((Bool) -> Void)? = nil
     ) -> Entity {
         let root = Entity()
@@ -55,16 +58,12 @@ public struct SequentialSwitchEntity {
         
         let ledEntity = ModelEntity(mesh: ledMesh, materials: [ledMatLocked])
         ledEntity.name = "StatusLED"
-        
-        // PERBAIKAN: baseSize.z * 0.5
         ledEntity.position = [0.0, 0.065, (baseSize.z * 0.5) + 0.005]
         root.addChild(ledEntity)
         
         // MARK: - 3. Switch Lever Arm (SwitchComponent)
         let leverPivot = Entity()
         leverPivot.name = "SwitchLeverPivot"
-        
-        // PERBAIKAN: baseSize.z * 0.5
         leverPivot.position = [0.0, -0.015, (baseSize.z * 0.5) + 0.012]
         
         let leverArmMesh = MeshResource.generateCylinder(height: 0.075, radius: 0.006)
@@ -76,23 +75,25 @@ public struct SequentialSwitchEntity {
         leverArm.position = [0.0, 0.0375, 0.0]
         leverPivot.addChild(leverArm)
         
-        // Initial angle: backward (-30°)
-        let backwardAngle: Float = -0.52
-        let forwardAngle: Float = 0.52
+        // Initial angle: backward toward user (+30° / +0.52 rad)
+        let backwardAngle: Float = 0.52
+        let forwardAngle: Float = -0.52
         leverPivot.orientation = simd_quatf(angle: backwardAngle, axis: [1, 0, 0])
         
-        // Attach SwitchComponent (initially locked!)
-//        leverPivot.components.set(SwitchComponent(
-//            switchAxis: [1, 0, 0],
-//            // forwardDirection, switchMode, dst diasumsikan sudah ada di definisi struct SwitchComponent Anda
-//            isGrabbed: false,
-//            isUnlocked: false,
-//            initialPosition: leverPivot.position,
-//            interactionRadius: 0.065,
-//            pullDistanceToUnlock: 0.035, // atau parameter sesuai definisi asli Anda
-//            pullAxis: [0, 0, 1]
-//        ))
-//        root.addChild(leverPivot)
+        // Attach HandInteractionComponent & SwitchComponent (initially locked!)
+        leverPivot.components.set(HandInteractionComponent(mode: fingerMode, interactionRadius: 0.065))
+        leverPivot.components.set(SwitchComponent(
+            states: [backwardAngle, forwardAngle],
+            currentStateIndex: 0,
+            localRotationAxis: [1, 0, 0],
+            movementAxis: [0, 0, -1],
+            dragSensitivity: 0.035,
+            interactionRadius: 0.065,
+            fingerMode: fingerMode,
+            behaviorMode: behaviorMode,
+            isLocked: true // Locked initially until pull step completes!
+        ))
+        root.addChild(leverPivot)
         
         // MARK: - 4. Pull Safety Knob (PullComponent)
         let pullKnob = Entity()
@@ -108,16 +109,38 @@ public struct SequentialSwitchEntity {
         let knobModel = ModelEntity(mesh: knobMesh, materials: [knobMat])
         pullKnob.addChild(knobModel)
         
-        // Attach PullComponent
+        // Attach HandInteractionComponent & PullComponent (requires 2 fingers)
+        pullKnob.components.set(HandInteractionComponent(mode: fingerMode, interactionRadius: 0.06))
         pullKnob.components.set(PullComponent(
-            pullAxis: [0, 0, 1],
-            interactionRadius: 0.05
+            pullAxis: [0, 0, 1], // Pull towards user (+Z)
+            pullDistanceToUnlock: 0.035,
+            interactionRadius: 0.06
         ))
         
         // MARK: - 5. Attach Sequence Controller to Root
         // Step 0: Pull Knob -> Step 1: Switch Lever
         root.components.set(SequenceInteractionComponent(
-            steps: [.pull, .push]
+            steps: [.pull, .switchLever],
+            autoResetOnCompletion: autoResetOnCompletion,
+            onStepCompleted: { stepIdx, mode in
+                if mode == .pull {
+                    // Safety pulled open: LED shows Orange (Ready to switch)
+                    ledEntity.model?.materials = [ledMatUnlocked]
+                } else if mode == .switchLever {
+                    let isForward = leverPivot.components[SwitchComponent.self]?.isOn ?? false
+                    ledEntity.model?.materials = [isForward ? ledMatActive : ledMatLocked]
+                    onStateChanged?(isForward)
+                }
+            },
+            onSequenceCompleted: {
+                let isForward = leverPivot.components[SwitchComponent.self]?.isOn ?? false
+                print("[SequentialSwitch] Sequence completed! Switch is \(isForward ? "ON" : "OFF")")
+            },
+            onSequenceReset: {
+                // When relocked, return LED to Red (locked, pull required again)
+                ledEntity.model?.materials = [ledMatLocked]
+                print("[SequentialSwitch] Relocked! Must pull safety knob to switch again.")
+            }
         ))
         
         return root

@@ -35,6 +35,22 @@ public struct SwitchSystem: System {
             }
             guard let initialRot = comp.initialRotation else { continue }
             
+            // If the switch is locked (e.g. by SequenceInteractionComponent), hold at resting orientation and ignore hand input
+            if comp.isLocked {
+                comp.isGrabbed = false
+                comp.lastInteractionPosition = nil
+                
+                let targetAngle = comp.states[comp.currentStateIndex]
+                let targetRotation = initialRot * simd_quatf(angle: targetAngle, axis: simd_normalize(comp.localRotationAxis))
+                switchEntity.transform.rotation = simd_slerp(
+                    switchEntity.transform.rotation,
+                    targetRotation,
+                    0.4
+                )
+                switchEntity.components.set(comp)
+                continue
+            }
+            
             // 2. Read normalized hand interaction data from HandInteractionComponent
             let hand = switchEntity.components[HandInteractionComponent.self]
             

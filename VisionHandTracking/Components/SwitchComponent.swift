@@ -52,6 +52,10 @@ public struct SwitchComponent: Component {
     public var grabbingChirality: HandAnchor.Chirality? = nil
     public var interactingFingers: Set<Finger> = []
     
+    /// Whether this switch is currently locked (e.g. by a sequence interaction).
+    /// When locked, the switch will not respond to hand interaction and stays held in resting orientation.
+    public var isLocked: Bool = false
+    
     /// Convenience property indicating whether the switch is in the active / ON state (> 0).
     public var isOn: Bool {
         return currentStateIndex > 0
@@ -71,7 +75,8 @@ public struct SwitchComponent: Component {
         onStateChanged: ((Int) -> Void)? = nil,
         isGrabbed: Bool = false,
         grabbingChirality: HandAnchor.Chirality? = nil,
-        interactingFingers: Set<Finger> = []
+        interactingFingers: Set<Finger> = [],
+        isLocked: Bool = false
     ) {
         self.states = states
         self.currentStateIndex = currentStateIndex
@@ -87,5 +92,6 @@ public struct SwitchComponent: Component {
         self.isGrabbed = isGrabbed
         self.grabbingChirality = grabbingChirality
         self.interactingFingers = interactingFingers
+        self.isLocked = isLocked
     }
 }

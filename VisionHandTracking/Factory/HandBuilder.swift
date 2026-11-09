@@ -68,10 +68,10 @@ public struct HandBuilder {
             root.addChild(model)
             
             // Pasang HandInteractionComponent & PullComponent
-            root.components.set(HandInteractionComponent(mode: .twoFingers, interactionRadius: 0.01 ))
+            root.components.set(HandInteractionComponent(mode: .twoFingers, interactionRadius: 0.06))
             root.components.set(PullComponent(
                 pullAxis: [0, 0, 1], // Ditarik ke arah Z positif (ke arah user)
-                interactionRadius: 0.01 // Jarak deteksi jari 6cm
+                interactionRadius: 0.06 // Jarak deteksi jari 6cm
             ))
             
             return root
@@ -82,7 +82,7 @@ public struct HandBuilder {
         states: [Float] = [0.52, -0.52],
         fingerMode: HandGestureMode = .either,
         behaviorMode: SwitchMode = .snap,
-        interactionRadius: Float = 0.01,
+        interactionRadius: Float = 0.065,
         dragSensitivity: Float = 0.035
     ) -> Entity {
         let root = Entity()
@@ -147,5 +147,19 @@ public struct HandBuilder {
         
         root.addChild(lever)
         return root
+    }
+    
+    public static func createSequentialSwitch(
+        position: SIMD3<Float> = [0.0, 1.0, -0.4],
+        fingerMode: HandGestureMode = .twoFingers,
+        behaviorMode: SwitchMode = .snap,
+        autoResetOnCompletion: Bool = true
+    ) -> Entity {
+        return SequentialSwitchEntity.create(
+            position: position,
+            fingerMode: fingerMode,
+            behaviorMode: behaviorMode,
+            autoResetOnCompletion: autoResetOnCompletion
+        )
     }
 }
