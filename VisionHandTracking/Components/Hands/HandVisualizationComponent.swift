@@ -17,24 +17,16 @@ public struct HandVisualizationComponent: Component {
     public var skinnedModel: ModelEntity?
     public var scale: SIMD3<Float>
     
-    // MARK: - Glove Snapping (OctaXR style)
-    /// Whether this hand/glove is currently snapped to an interactable object.
     public var isSnapped: Bool = false
-    
-    /// Preserved joint transforms of the skinned glove model captured at grab.
+
     public var preservedGloveTransforms: [Transform]? = nil
     
-    /// Preserved joint local positions for joint spheres mode captured at grab.
     public var preservedJointPositions: [HandSkeleton.JointName: SIMD3<Float>]? = nil
     
-    /// The target entity the glove is currently snapped to.
     public var snappedTargetEntity: Entity? = nil
     
-    /// World transform offset between target entity and hand anchor when grab began.
     public var anchorOffsetFromTarget: simd_float4x4? = nil
     
-    /// Which fingers should stay still / snapped during the interaction (e.g. [.thumb, .index]).
-    /// Other fingers remain free and continue updating with live tracking.
     public var snappedFingers: Set<Finger> = [.thumb, .index]
     
     public init(

@@ -68,10 +68,10 @@ public struct HandBuilder {
             root.addChild(model)
             
             // Pasang HandInteractionComponent & PullComponent
-            root.components.set(HandInteractionComponent(mode: .twoFingers, interactionRadius: 0.01))
+            root.components.set(HandInteractionComponent(mode: .twoFingers, interactionRadius: 0.06))
             root.components.set(PullComponent(
                 pullAxis: [0, 0, 1], // Ditarik ke arah Z positif (ke arah user)
-                interactionRadius: 0.01 // Jarak deteksi jari 6cm
+                interactionRadius: 0.06 // Jarak deteksi jari 6cm
             ))
             
             return root
@@ -79,11 +79,11 @@ public struct HandBuilder {
     
     public static func createSwitch(
         position: SIMD3<Float> = [0.0, 1.0, -0.4],
-        states: [Float] = [-0.52, 0, 0.52],
+        states: [Float] = [0.52, -0.52],
         fingerMode: HandGestureMode = .either,
         behaviorMode: SwitchMode = .snap,
-        interactionRadius: Float = 0.01,
-        dragSensitivity: Float = 0.4
+        interactionRadius: Float = 0.065,
+        dragSensitivity: Float = 0.035
     ) -> Entity {
         let root = Entity()
         root.name = "TestSwitchRoot"
@@ -121,18 +121,17 @@ public struct HandBuilder {
         knob.position = [0, 0.075, 0]
         lever.addChild(knob)
         
-        // Initial angle: backward (-30° / -0.52 rad)
-        let backwardAngle: Float = -0.52
-        let forwardAngle: Float = 0.52
+        // Initial angle: backward toward user (+30° / +0.52 rad)
+        let backwardAngle: Float = states.first ?? 0.52
         lever.orientation = simd_quatf(angle: backwardAngle, axis: [1, 0, 0])
         
         // Attach HandInteractionComponent & SwitchComponent
-        lever.components.set(HandInteractionComponent(mode: fingerMode, interactionRadius: 0.01))
+        lever.components.set(HandInteractionComponent(mode: fingerMode, interactionRadius: interactionRadius))
         lever.components.set(SwitchComponent(
-            states: [backwardAngle, forwardAngle],
+            states: states,
             currentStateIndex: 0,
             localRotationAxis: [1, 0, 0],
-            movementAxis: [0, 0, 1],
+            movementAxis: [0, 0, -1],
             dragSensitivity: dragSensitivity,
             interactionRadius: interactionRadius,
             fingerMode: fingerMode,

@@ -15,6 +15,7 @@ internal import ILSFoundation
 public class HandVisualizationSystem: System {
     public static let query = EntityQuery(where: .has(HandVisualizationComponent.self))
     private static let pullQuery = EntityQuery(where: .has(PullComponent.self))
+    private static let switchQuery = EntityQuery(where: .has(SwitchComponent.self))
     
     private var tipDefaultMaterial: RealityKit.Material?
     private var tipSnappedMaterial: RealityKit.Material?
@@ -26,6 +27,7 @@ public class HandVisualizationSystem: System {
     
     public func update(context: SceneUpdateContext) {
         let pullEntities = Array(context.scene.performQuery(Self.pullQuery))
+        let switchEntities = Array(context.scene.performQuery(Self.switchQuery))
         
         for anchorEntity in context.entities(matching: Self.query, updatingSystemWhen: .rendering) {
             guard var visualization = anchorEntity.components[HandVisualizationComponent.self] else { continue }
@@ -46,50 +48,59 @@ public class HandVisualizationSystem: System {
             
             anchorEntity.isEnabled = true
             
-            // Check if any PullComponent is currently grabbed by this hand
+            // 1. Check if holding a Pull Entity
             let grabbedPullEntity = pullEntities.first { entity in
                 guard let pull = entity.components[PullComponent.self] else { return false }
                 return pull.isGrabbed && (pull.grabbingChirality == visualization.chirality || pull.grabbingChirality == nil)
             }
             
-            if let targetEntity = grabbedPullEntity, let pull = targetEntity.components[PullComponent.self] {
-                // MARK: - Hand/Glove Snapping Active (OctaXR style)
+            // 2. Check if holding a Switch Entity
+            let grabbedSwitchEntity = switchEntities.first { entity in
+                guard let switchComp = entity.components[SwitchComponent.self] else { return false }
+                return switchComp.isGrabbed && (switchComp.grabbingChirality == visualization.chirality || switchComp.grabbingChirality == nil)
+            }
+            
+            // 3. Resolve active target and fingers
+            let targetEntity = grabbedPullEntity ?? grabbedSwitchEntity
+            var activeFingers: Set<Finger> = [.thumb, .index]
+            
+            if let pullTarget = grabbedPullEntity, let pull = pullTarget.components[PullComponent.self] {
+                activeFingers = pull.interactingFingers.isEmpty ? [.thumb, .index] : pull.interactingFingers
+            } else if let switchTarget = grabbedSwitchEntity, let switchComp = switchTarget.components[SwitchComponent.self] {
+                activeFingers = switchComp.interactingFingers.isEmpty ? [.thumb, .index] : switchComp.interactingFingers
+            }
+            
+            // 4. Apply Snapping Logic
+            if let target = targetEntity {
                 if !visualization.isSnapped {
                     visualization.isSnapped = true
-                    visualization.snappedTargetEntity = targetEntity
-                    visualization.snappedFingers = pull.interactingFingers.isEmpty ? [.thumb, .index] : pull.interactingFingers
+                    visualization.snappedTargetEntity = target
+                    visualization.snappedFingers = activeFingers
                     
-                    // 1. Preserve glove joint transforms (freeze finger pose in pinch)
                     if let gloveModel = visualization.skinnedModel {
                         updateGloveJoints(for: gloveModel, with: skeleton)
                         visualization.preservedGloveTransforms = gloveModel.jointTransforms
                     }
                     
-                    // 2. Preserve joint positions (for joint spheres mode)
                     var jointPositions: [HandSkeleton.JointName: SIMD3<Float>] = [:]
                     for joint in skeleton.allJoints {
                         jointPositions[joint.name] = skeleton.joint(joint.name).anchorFromJointTransform.translation
                     }
                     visualization.preservedJointPositions = jointPositions
                     
-                    // 3. Capture offset between target entity and tracked hand wrist in world coordinates
-                    let targetWorld = targetEntity.transformMatrix(relativeTo: nil)
+                    let targetWorld = target.transformMatrix(relativeTo: nil)
                     let handWorld = trackedHand.originFromAnchorTransform
                     visualization.anchorOffsetFromTarget = simd_mul(simd_inverse(targetWorld), handWorld)
                 }
                 
-                // Move the visual hand along with the pulled component
                 if let offset = visualization.anchorOffsetFromTarget {
-                    let currentTargetWorld = targetEntity.transformMatrix(relativeTo: nil)
+                    let currentTargetWorld = target.transformMatrix(relativeTo: nil)
                     let snappedWorld = simd_mul(currentTargetWorld, offset)
                     anchorEntity.transform = Transform(matrix: snappedWorld)
                 } else {
                     anchorEntity.transform = Transform(matrix: trackedHand.originFromAnchorTransform)
                 }
                 
-                // Selective finger preservation:
-                // Only the interacting fingers (e.g. thumb & index) stay frozen in the grab pose,
-                // while the remaining fingers (e.g. middle, ring, little) continue tracking live movements.
                 switch visualization.mode {
                 case .jointSpheres:
                     if let spheresRoot = visualization.jointSpheresRoot, let savedPos = visualization.preservedJointPositions {
@@ -111,9 +122,8 @@ public class HandVisualizationSystem: System {
                     }
                 }
             } else {
-                // MARK: - Normal Live Hand Tracking
+                // 5. Reset Unsnapped State
                 if visualization.isSnapped {
-                    // Released! Clear snapping state and return to normal
                     visualization.isSnapped = false
                     visualization.preservedGloveTransforms = nil
                     visualization.preservedJointPositions = nil
